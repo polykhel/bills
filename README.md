@@ -1,36 +1,93 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+BillTracker
 
-## Getting Started
+BillTracker is a modern, privacy-focused React application designed to help you manage credit card bills, track installments, and visualize due dates. Built with a "local-first" approach, all data is stored securely in your browser's local storage.
 
-First, run the development server:
+Features
 
-```bash
+📊 Dashboard
+
+Financial Overview: Instantly see your Total Statement Balance, Unpaid Balance, and total Monthly Amortizations.
+
+Monthly Bill List: A detailed table of all cards due for the selected month.
+
+Interactive Tracking: * Input actual statement amounts when SOAs arrive.
+
+Toggle "Paid" status.
+
+Override due dates for specific months (useful for weekends/holidays).
+
+CSV Export: Download your monthly bill summary for use in Excel or Google Sheets.
+
+📅 Calendar View
+
+Visual Schedule: View your bills on a monthly calendar to plan cash flow.
+
+Smart Indicators: See bank names, amounts due, and payment status directly on the calendar grid.
+
+💳 Management
+
+Profile System: Manage finances for multiple people (e.g., Self, Spouse, Family) without cluttering a single view.
+
+Credit Card Manager: Add cards with specific details like Bank Name, Cut-off dates, Due dates, and custom color identifiers.
+
+Installment Tracker: * Track long-term installment plans (e.g., "New Laptop", "Appliances").
+
+Amortization Override: Calculate monthly payments automatically (Principal / Terms) or input the exact bank amount to account for interest.
+
+Progress Tracking: See how many terms are paid vs. total terms.
+
+💾 Data Management
+
+Import/Export (JSON): Backup your profile data to a JSON file or transfer it to another device.
+
+Local Storage: Data persists across sessions without requiring a login or backend server.
+
+Tech Stack
+
+Framework: React (Next.js App Router structure)
+
+Styling: Tailwind CSS
+
+Icons: Lucide React
+
+Date Handling: date-fns
+
+State Management: React Hooks (useState, useEffect, useMemo)
+
+Getting Started
+
+This is a single-file component designed to run within a Next.js application.
+
+Install Dependencies:
+Make sure you have the necessary packages installed in your project:
+
+npm install date-fns lucide-react clsx tailwind-merge
+
+
+Integration:
+Place the page.tsx file into your Next.js app directory (e.g., app/page.tsx).
+
+Run Development Server:
+
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Usage Guide
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Create a Profile: On first load, a default "My Profile" is created. You can rename this or add new profiles (e.g., "Spouse") via the user icon in the top right.
 
-## Learn More
+Add Cards: Go to the Manage tab and add your credit cards. Set the "Due Day" to your usual due date.
 
-To learn more about Next.js, take a look at the following resources:
+Add Installments: If you have ongoing installments, add them in the Manage tab. Link them to a specific card.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Tracking: * Go to the Dashboard.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+If a Statement of Account (SOA) hasn't arrived, the app estimates the amount based on your active installments.
 
-## Deploy on Vercel
+Once the SOA arrives, type the actual amount in the "Statement Balance" field.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Click the circle icon to mark a bill as Paid.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+License
+
+This project is open-source and available for personal use.
