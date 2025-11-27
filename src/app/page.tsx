@@ -7,10 +7,10 @@ import {
   isSameDay, getDay, differenceInCalendarMonths, parseISO, isValid 
 } from "date-fns";
 import { 
-  ChevronLeft, ChevronRight, Plus, Trash2, 
+  ChevronLeft, ChevronRight, Plus, Trash2, Pencil,
   CreditCard as CardIcon, List as ListIcon, 
   CheckCircle2, Circle, Users, UserPlus, User,
-  Download, Upload, FileSpreadsheet
+  Download, Upload, FileSpreadsheet, ArrowUpDown, Calendar, Calculator
 } from "lucide-react";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -58,6 +58,13 @@ export interface InstallmentStatus {
   isActive: boolean;
   isFinished: boolean;
   isUpcoming: boolean;
+}
+
+type SortDirection = 'asc' | 'desc';
+
+interface SortConfig {
+  key: string;
+  direction: SortDirection;
 }
 
 // --- Utilities ---
@@ -128,20 +135,42 @@ export const getInstallmentStatus = (
   };
 };
 
+const formatCurrency = (amount: number) => {
+  return amount.toLocaleString(undefined, { 
+    minimumFractionDigits: 2, 
+    maximumFractionDigits: 2 
+  });
+};
+
 // --- Components ---
 
 const Modal = ({ isOpen, onClose, title, children }: any) => {
   if (!isOpen) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
-        <div className="flex justify-between items-center p-4 border-b bg-slate-50">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200 max-h-[90vh] overflow-y-auto">
+        <div className="flex justify-between items-center p-4 border-b bg-slate-50 sticky top-0 z-10">
           <h3 className="font-semibold text-slate-800">{title}</h3>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600">✕</button>
         </div>
         <div className="p-4">{children}</div>
       </div>
     </div>
+  );
+};
+
+const SortableHeader = ({ label, sortKey, currentSort, onSort }: { label: string, sortKey: string, currentSort: SortConfig, onSort: (key: string) => void }) => {
+  const isActive = currentSort.key === sortKey;
+  return (
+    <th 
+      className="p-4 cursor-pointer hover:bg-slate-100 transition-colors select-none group"
+      onClick={() => onSort(sortKey)}
+    >
+      <div className="flex items-center gap-2">
+        {label}
+        <ArrowUpDown className={cn("w-3 h-3 transition-opacity", isActive ? "opacity-100 text-blue-600" : "opacity-30 group-hover:opacity-60")} />
+      </div>
+    </th>
   );
 };
 
@@ -157,6 +186,21 @@ export default function BillTrackerApp() {
   const [installments, setInstallments] = useState<Installment[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   
+  // Edit State
+  const [editingCard, setEditingCard] = useState<CreditCard | null>(null);
+  const [editingInst, setEditingInst] = useState<Installment | null>(null);
+
+  // Installment Form State
+  const [instMode, setInstMode] = useState<'date' | 'term'>('date');
+  // Temporary state for the term calculation inside the modal
+  const [tempCurrentTerm, setTempCurrentTerm] = useState<number>(1);
+  const [tempTerms, setTempTerms] = useState<number>(12); // Used to calculate max term
+
+  // Sorting State
+  const [dashboardSort, setDashboardSort] = useState<SortConfig>({ key: 'dueDate', direction: 'asc' });
+  const [manageCardSort, setManageCardSort] = useState<SortConfig>({ key: 'bankName', direction: 'asc' });
+  const [manageInstSort, setManageInstSort] = useState<SortConfig>({ key: 'name', direction: 'asc' });
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Modals
@@ -265,6 +309,73 @@ export default function BillTrackerApp() {
     return { billTotal, unpaidTotal, installmentTotal };
   }, [activeCards, monthlyStatements, activeInstallments]);
 
+  // --- Sorting Logic ---
+
+  const handleSort = (config: SortConfig, setConfig: (c: SortConfig) => void, key: string) => {
+    setConfig({
+      key,
+      direction: config.key === key && config.direction === 'asc' ? 'desc' : 'asc'
+    });
+  };
+
+  const sortedDashboardData = useMemo(() => {
+    const data = activeCards.map(card => {
+      const stmt = monthlyStatements.find(s => s.cardId === card.id);
+      const defaultDate = setDate(viewDate, card.dueDay);
+      const displayDate = stmt?.customDueDate ? parseISO(stmt.customDueDate) : defaultDate;
+      const cardInstTotal = getCardInstallmentTotal(card.id);
+      const displayAmount = stmt ? stmt.amount : cardInstTotal;
+      const isPaid = stmt?.isPaid || false;
+      
+      return { card, stmt, displayDate, displayAmount, isPaid, cardInstTotal };
+    });
+
+    return data.sort((a, b) => {
+      const dir = dashboardSort.direction === 'asc' ? 1 : -1;
+      switch (dashboardSort.key) {
+        case 'bankName': return a.card.bankName.localeCompare(b.card.bankName) * dir;
+        case 'dueDate': return (a.displayDate.getTime() - b.displayDate.getTime()) * dir;
+        case 'amount': return (a.displayAmount - b.displayAmount) * dir;
+        case 'status': return (Number(a.isPaid) - Number(b.isPaid)) * dir;
+        default: return 0;
+      }
+    });
+  }, [activeCards, monthlyStatements, viewDate, dashboardSort]);
+
+  const sortedManageCards = useMemo(() => {
+    return [...activeCards].sort((a, b) => {
+      const dir = manageCardSort.direction === 'asc' ? 1 : -1;
+      switch(manageCardSort.key) {
+        case 'bankName': return a.bankName.localeCompare(b.bankName) * dir;
+        case 'cardName': return a.cardName.localeCompare(b.cardName) * dir;
+        case 'dueDay': return (a.dueDay - b.dueDay) * dir;
+        case 'cutoffDay': return (a.cutoffDay - b.cutoffDay) * dir;
+        default: return 0;
+      }
+    });
+  }, [activeCards, manageCardSort]);
+
+  const sortedManageInstallments = useMemo(() => {
+    const profileInstallments = installments.filter(inst => activeCards.find(c => c.id === inst.cardId));
+    
+    return profileInstallments.sort((a, b) => {
+      const dir = manageInstSort.direction === 'asc' ? 1 : -1;
+      const cardA = activeCards.find(c => c.id === a.cardId)?.bankName || '';
+      const cardB = activeCards.find(c => c.id === b.cardId)?.bankName || '';
+
+      switch(manageInstSort.key) {
+        case 'name': return a.name.localeCompare(b.name) * dir;
+        case 'card': return cardA.localeCompare(cardB) * dir;
+        case 'monthly': return (a.monthlyAmortization - b.monthlyAmortization) * dir;
+        case 'progress': 
+          const statA = getInstallmentStatus(a, viewDate).currentTerm;
+          const statB = getInstallmentStatus(b, viewDate).currentTerm;
+          return (statA - statB) * dir;
+        default: return 0;
+      }
+    });
+  }, [installments, activeCards, manageInstSort, viewDate]);
+
   // --- Handlers ---
 
   const handleUpdateStatement = (cardId: string, updates: Partial<Statement>) => {
@@ -310,44 +421,103 @@ export default function BillTrackerApp() {
     });
   };
 
-  const addCard = (e: React.FormEvent) => {
+  const handleSaveCard = (e: React.FormEvent) => {
     e.preventDefault();
     const form = e.target as HTMLFormElement;
     const formData = new FormData(form);
-    const newCard: CreditCard = {
-      id: crypto.randomUUID(),
-      profileId: activeProfileId,
+    
+    const cardData = {
       bankName: formData.get("bankName") as string,
       cardName: formData.get("cardName") as string,
       dueDay: parseInt(formData.get("dueDay") as string),
       cutoffDay: parseInt(formData.get("cutoffDay") as string),
       color: formData.get("color") as string,
     };
-    setCards([...cards, newCard]);
+
+    if (editingCard) {
+      setCards(prev => prev.map(c => c.id === editingCard.id ? { ...c, ...cardData } : c));
+    } else {
+      const newCard: CreditCard = {
+        id: crypto.randomUUID(),
+        profileId: activeProfileId,
+        ...cardData
+      };
+      setCards(prev => [...prev, newCard]);
+    }
     setShowCardModal(false);
+    setEditingCard(null);
     form.reset();
   };
 
-  const addInstallment = (e: React.FormEvent) => {
+  const handleSaveInstallment = (e: React.FormEvent) => {
     e.preventDefault();
     const form = e.target as HTMLFormElement;
     const formData = new FormData(form);
+    
     const principal = parseFloat(formData.get("principal") as string);
     const terms = parseInt(formData.get("terms") as string);
     const customMonthly = parseFloat(formData.get("monthlyAmortization") as string);
+
+    // Calculate Start Date logic
+    let calculatedStartDate = formData.get("startDate") as string;
     
-    const newInst: Installment = {
-      id: crypto.randomUUID(),
+    if (instMode === 'term') {
+      const currentTermInput = parseInt(formData.get("currentTerm") as string) || 1;
+      // Term 1 is the start month. Term 2 is 1 month later.
+      // So subtract (currentTerm - 1) months from viewDate
+      const backDate = subMonths(viewDate, currentTermInput - 1);
+      calculatedStartDate = format(backDate, "yyyy-MM-dd");
+    }
+
+    const instData = {
       cardId: formData.get("cardId") as string,
       name: formData.get("name") as string,
       totalPrincipal: principal,
       terms: terms,
       monthlyAmortization: customMonthly || (principal / terms),
-      startDate: formData.get("startDate") as string,
+      startDate: calculatedStartDate,
     };
-    setInstallments([...installments, newInst]);
+
+    if (editingInst) {
+      setInstallments(prev => prev.map(i => i.id === editingInst.id ? { ...i, ...instData } : i));
+    } else {
+      const newInst: Installment = {
+        id: crypto.randomUUID(),
+        ...instData
+      };
+      setInstallments(prev => [...prev, newInst]);
+    }
+    
     setShowInstModal(false);
+    setEditingInst(null);
     form.reset();
+  };
+
+  const openAddCard = () => {
+    setEditingCard(null);
+    setShowCardModal(true);
+  };
+
+  const openEditCard = (card: CreditCard) => {
+    setEditingCard(card);
+    setShowCardModal(true);
+  };
+
+  const openAddInst = () => {
+    setEditingInst(null);
+    setInstMode('date');
+    setTempCurrentTerm(1);
+    setTempTerms(12);
+    setShowInstModal(true);
+  };
+
+  const openEditInst = (inst: Installment) => {
+    setEditingInst(inst);
+    // When editing an existing installment, default to date mode, but pre-fill data.
+    setInstMode('date'); 
+    setTempCurrentTerm(getInstallmentStatus(inst, viewDate).currentTerm);
+    setTempTerms(inst.terms);
+    setShowInstModal(true);
   };
 
   const addProfile = (e: React.FormEvent) => {
@@ -495,15 +665,15 @@ export default function BillTrackerApp() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
           <p className="text-slate-500 text-sm font-medium">Total Statement Balance</p>
-          <p className="text-3xl font-bold text-slate-800 mt-2">₱{totals.billTotal.toLocaleString()}</p>
+          <p className="text-3xl font-bold text-slate-800 mt-2">₱{formatCurrency(totals.billTotal)}</p>
         </div>
         <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
           <p className="text-slate-500 text-sm font-medium">Unpaid Balance</p>
-          <p className="text-3xl font-bold text-rose-600 mt-2">₱{totals.unpaidTotal.toLocaleString()}</p>
+          <p className="text-3xl font-bold text-rose-600 mt-2">₱{formatCurrency(totals.unpaidTotal)}</p>
         </div>
         <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
           <p className="text-slate-500 text-sm font-medium">Monthly Installments</p>
-          <p className="text-3xl font-bold text-blue-600 mt-2">₱{totals.installmentTotal.toLocaleString(undefined, { maximumFractionDigits: 2 })}</p>
+          <p className="text-3xl font-bold text-blue-600 mt-2">₱{formatCurrency(totals.installmentTotal)}</p>
           <p className="text-xs text-slate-400 mt-1">Included in statements if billed</p>
         </div>
       </div>
@@ -522,23 +692,16 @@ export default function BillTrackerApp() {
           <table className="w-full text-left border-collapse">
             <thead className="bg-slate-50 border-b border-slate-200 text-xs uppercase text-slate-500 font-semibold">
               <tr>
-                <th className="p-4 w-1/4">Card</th>
-                <th className="p-4 w-1/6">Due Date</th>
-                <th className="p-4 w-1/4">Statement Balance</th>
+                <SortableHeader label="Card" sortKey="bankName" currentSort={dashboardSort} onSort={(k) => handleSort(dashboardSort, setDashboardSort, k)} />
+                <SortableHeader label="Due Date" sortKey="dueDate" currentSort={dashboardSort} onSort={(k) => handleSort(dashboardSort, setDashboardSort, k)} />
+                <SortableHeader label="Statement Balance" sortKey="amount" currentSort={dashboardSort} onSort={(k) => handleSort(dashboardSort, setDashboardSort, k)} />
                 <th className="p-4 w-1/4">Active Installments</th>
-                <th className="p-4 w-1/12 text-center">Status</th>
+                <SortableHeader label="Status" sortKey="status" currentSort={dashboardSort} onSort={(k) => handleSort(dashboardSort, setDashboardSort, k)} />
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {activeCards.map(card => {
-                const stmt = monthlyStatements.find(s => s.cardId === card.id);
+              {sortedDashboardData.map(({ card, stmt, displayDate, displayAmount, cardInstTotal }) => {
                 const cardInsts = activeInstallments.filter(i => i.cardId === card.id);
-                
-                const defaultDate = setDate(viewDate, card.dueDay);
-                const displayDate = stmt?.customDueDate ? parseISO(stmt.customDueDate) : defaultDate;
-                
-                const cardInstTotal = getCardInstallmentTotal(card.id);
-                const displayAmount = stmt ? stmt.amount : cardInstTotal;
                 
                 return (
                   <tr key={card.id} className="hover:bg-slate-50 transition-colors group">
@@ -560,7 +723,7 @@ export default function BillTrackerApp() {
                       <div className="flex flex-col">
                         <input 
                           type="date"
-                          className="bg-transparent border-none p-0 text-sm font-medium text-slate-700 focus:ring-0 cursor-pointer"
+                          className="bg-transparent border-none p-0 text-sm font-medium text-slate-700 focus:ring-0 cursor-pointer w-32"
                           value={isValid(displayDate) ? format(displayDate, "yyyy-MM-dd") : ""}
                           onChange={(e) => handleUpdateStatement(card.id, { customDueDate: e.target.value })}
                         />
@@ -572,10 +735,14 @@ export default function BillTrackerApp() {
                         <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-sm">₱</span>
                         <input 
                           type="number" 
+                          step="0.01"
                           className="w-full pl-6 pr-2 py-1.5 bg-slate-100 border-transparent focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 rounded-lg text-sm transition-all font-medium text-slate-800"
                           placeholder="0.00"
                           value={displayAmount || ""}
                           onChange={(e) => handleUpdateStatement(card.id, { amount: parseFloat(e.target.value) || 0 })}
+                          onBlur={(e) => {
+                             // Optional: format on blur if needed, currently raw input
+                          }}
                         />
                       </div>
                     </td>
@@ -686,7 +853,7 @@ export default function BillTrackerApp() {
                       >
                         <span className="font-semibold truncate">{c.bankName}</span>
                         <span className="font-mono">
-                          {amount > 0 ? `₱${amount.toLocaleString()}` : "₱-"}
+                          {amount > 0 ? `₱${formatCurrency(amount)}` : "₱-"}
                         </span>
                       </div>
                     );
@@ -735,25 +902,34 @@ export default function BillTrackerApp() {
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-            <CardIcon className="w-5 h-5" /> Cards ({profiles.find(p => p.id === activeProfileId)?.name})
-          </h2>
+          <div className="flex items-center gap-4">
+             <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+              <CardIcon className="w-5 h-5" /> Cards ({profiles.find(p => p.id === activeProfileId)?.name})
+            </h2>
+             <div className="flex gap-2 text-xs text-slate-500">
+               <button onClick={() => handleSort(manageCardSort, setManageCardSort, 'bankName')} className={cn("hover:text-blue-600", manageCardSort.key === 'bankName' && "text-blue-600 font-bold")}>Name</button>
+               <button onClick={() => handleSort(manageCardSort, setManageCardSort, 'dueDay')} className={cn("hover:text-blue-600", manageCardSort.key === 'dueDay' && "text-blue-600 font-bold")}>Due Day</button>
+             </div>
+          </div>
+         
           <button 
-            onClick={() => setShowCardModal(true)}
+            onClick={openAddCard}
             className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-800 transition"
           >
             <Plus className="w-4 h-4" /> Add Card
           </button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {activeCards.map(card => (
+          {sortedManageCards.map(card => (
             <div key={card.id} className="relative group bg-slate-50 rounded-xl p-5 border border-slate-200 hover:border-slate-300 transition-all">
-               <button 
-                onClick={() => deleteCard(card.id)}
-                className="absolute top-3 right-3 text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
+               <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition">
+                 <button onClick={() => openEditCard(card)} className="text-slate-400 hover:text-blue-500">
+                   <Pencil className="w-4 h-4" />
+                 </button>
+                 <button onClick={() => deleteCard(card.id)} className="text-slate-400 hover:text-rose-500">
+                   <Trash2 className="w-4 h-4" />
+                 </button>
+               </div>
               <div className="flex items-center gap-3 mb-4">
                 <div 
                   className="w-12 h-8 rounded-md shadow-sm"
@@ -786,7 +962,7 @@ export default function BillTrackerApp() {
             <ListIcon className="w-5 h-5" /> All Installments
           </h2>
           <button 
-            onClick={() => setShowInstModal(true)}
+            onClick={openAddInst}
             className="flex items-center gap-2 bg-white border border-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-50 transition"
           >
             <Plus className="w-4 h-4" /> Add Installment
@@ -796,26 +972,24 @@ export default function BillTrackerApp() {
           <table className="w-full text-left text-sm">
             <thead className="text-xs text-slate-500 uppercase bg-slate-50">
               <tr>
-                <th className="p-3 rounded-l-lg">Item</th>
-                <th className="p-3">Card</th>
-                <th className="p-3">Progress</th>
-                <th className="p-3">Monthly</th>
+                <SortableHeader label="Item" sortKey="name" currentSort={manageInstSort} onSort={(k) => handleSort(manageInstSort, setManageInstSort, k)} />
+                <SortableHeader label="Card" sortKey="card" currentSort={manageInstSort} onSort={(k) => handleSort(manageInstSort, setManageInstSort, k)} />
+                <SortableHeader label="Progress" sortKey="progress" currentSort={manageInstSort} onSort={(k) => handleSort(manageInstSort, setManageInstSort, k)} />
+                <SortableHeader label="Monthly" sortKey="monthly" currentSort={manageInstSort} onSort={(k) => handleSort(manageInstSort, setManageInstSort, k)} />
                 <th className="p-3 text-right rounded-r-lg">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {installments
-                .filter(inst => activeCards.find(c => c.id === inst.cardId))
-                .map(inst => {
+              {sortedManageInstallments.map(inst => {
                   const card = activeCards.find(c => c.id === inst.cardId);
                   const status = getInstallmentStatus(inst, viewDate);
                   return (
-                    <tr key={inst.id} className="hover:bg-slate-50">
+                    <tr key={inst.id} className="hover:bg-slate-50 group">
                       <td className="p-3 font-medium text-slate-800">{inst.name}</td>
                       <td className="p-3 text-slate-600">{card?.bankName}</td>
                       <td className="p-3">
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-mono">{status.currentTerm > inst.terms ? "Done" : status.currentTerm < 1 ? "Pending" : `${status.currentTerm}/${inst.terms}`}</span>
+                          <span className="text-xs font-mono w-12 text-right">{status.currentTerm > inst.terms ? "Done" : status.currentTerm < 1 ? "Pending" : `${status.currentTerm}/${inst.terms}`}</span>
                           {status.isActive && (
                             <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
                               <div 
@@ -826,14 +1000,21 @@ export default function BillTrackerApp() {
                           )}
                         </div>
                       </td>
-                      <td className="p-3 text-slate-600">₱{inst.monthlyAmortization.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                      <td className="p-3 text-slate-600">₱{formatCurrency(inst.monthlyAmortization)}</td>
                       <td className="p-3 text-right">
-                        <button onClick={() => deleteInstallment(inst.id)} className="text-slate-400 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>
+                        <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition">
+                           <button onClick={() => openEditInst(inst)} className="text-slate-400 hover:text-blue-500">
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => deleteInstallment(inst.id)} className="text-slate-400 hover:text-rose-500">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   )
               })}
-              {installments.filter(inst => activeCards.find(c => c.id === inst.cardId)).length === 0 && (
+              {sortedManageInstallments.length === 0 && (
                 <tr><td colSpan={5} className="p-4 text-center text-slate-400">No installments found.</td></tr>
               )}
             </tbody>
@@ -938,75 +1119,203 @@ export default function BillTrackerApp() {
         {activeTab === "manage" && renderManage()}
       </main>
 
-      {/* Modals */}
-      <Modal isOpen={showCardModal} onClose={() => setShowCardModal(false)} title="Add New Card">
-        <form onSubmit={addCard} className="space-y-4">
+      {/* --- MODALS --- */}
+
+      <Modal isOpen={showCardModal} onClose={() => setShowCardModal(false)} title={editingCard ? "Edit Card" : "Add New Card"}>
+        <form onSubmit={handleSaveCard} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">Bank Name</label>
-              <input required name="bankName" placeholder="e.g. BPI" className="w-full p-2 border rounded-lg text-sm" />
+              <input 
+                required 
+                name="bankName" 
+                defaultValue={editingCard?.bankName} 
+                placeholder="e.g. BPI" 
+                className="w-full p-2 border rounded-lg text-sm" 
+              />
             </div>
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">Card Name</label>
-              <input required name="cardName" placeholder="e.g. Gold Rewards" className="w-full p-2 border rounded-lg text-sm" />
+              <input 
+                required 
+                name="cardName" 
+                defaultValue={editingCard?.cardName} 
+                placeholder="e.g. Gold Rewards" 
+                className="w-full p-2 border rounded-lg text-sm" 
+              />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">Due Day (1-31)</label>
-              <input required type="number" min="1" max="31" name="dueDay" className="w-full p-2 border rounded-lg text-sm" />
+              <input 
+                required 
+                type="number" 
+                min="1" 
+                max="31" 
+                name="dueDay" 
+                defaultValue={editingCard?.dueDay} 
+                className="w-full p-2 border rounded-lg text-sm" 
+              />
             </div>
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">Cut-off Day</label>
-              <input required type="number" min="1" max="31" name="cutoffDay" className="w-full p-2 border rounded-lg text-sm" />
+              <input 
+                required 
+                type="number" 
+                min="1" 
+                max="31" 
+                name="cutoffDay" 
+                defaultValue={editingCard?.cutoffDay} 
+                className="w-full p-2 border rounded-lg text-sm" 
+              />
             </div>
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-700 mb-1">Color Identifier</label>
-            <input type="color" name="color" defaultValue="#334155" className="w-full h-10 p-1 border rounded-lg cursor-pointer" />
+            <input 
+              type="color" 
+              name="color" 
+              defaultValue={editingCard?.color || "#334155"} 
+              className="w-full h-10 p-1 border rounded-lg cursor-pointer" 
+            />
           </div>
-          <button type="submit" className="w-full bg-slate-900 text-white py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800">Save Card</button>
+          <button type="submit" className="w-full bg-slate-900 text-white py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800">
+            {editingCard ? "Update Card" : "Save Card"}
+          </button>
         </form>
       </Modal>
 
-      <Modal isOpen={showInstModal} onClose={() => setShowInstModal(false)} title="Add Installment">
-        <form onSubmit={addInstallment} className="space-y-4">
+      <Modal isOpen={showInstModal} onClose={() => setShowInstModal(false)} title={editingInst ? "Edit Installment" : "Add Installment"}>
+        <form onSubmit={handleSaveInstallment} className="space-y-4">
           <div>
             <label className="block text-xs font-medium text-slate-700 mb-1">Item/Purchase Name</label>
-            <input required name="name" placeholder="e.g. New Laptop" className="w-full p-2 border rounded-lg text-sm" />
+            <input 
+              required 
+              name="name" 
+              defaultValue={editingInst?.name} 
+              placeholder="e.g. New Laptop" 
+              className="w-full p-2 border rounded-lg text-sm" 
+            />
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-700 mb-1">Charge to Card</label>
-            <select name="cardId" required className="w-full p-2 border rounded-lg text-sm bg-white">
+            <select 
+              name="cardId" 
+              required 
+              defaultValue={editingInst?.cardId} 
+              className="w-full p-2 border rounded-lg text-sm bg-white"
+            >
               {activeCards.map(c => <option key={c.id} value={c.id}>{c.bankName} - {c.cardName}</option>)}
             </select>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">Principal Amount</label>
-              <input required type="number" step="0.01" name="principal" className="w-full p-2 border rounded-lg text-sm" />
+              <input 
+                required 
+                type="number" 
+                step="0.01" 
+                name="principal" 
+                defaultValue={editingInst?.totalPrincipal} 
+                className="w-full p-2 border rounded-lg text-sm" 
+              />
             </div>
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">Terms (Months)</label>
-              <input required type="number" name="terms" placeholder="12, 24, 36" className="w-full p-2 border rounded-lg text-sm" />
+              <input 
+                required 
+                type="number" 
+                name="terms" 
+                min="1"
+                defaultValue={editingInst?.terms || tempTerms} 
+                onChange={(e) => setTempTerms(parseInt(e.target.value))}
+                placeholder="12, 24, 36" 
+                className="w-full p-2 border rounded-lg text-sm" 
+              />
             </div>
           </div>
+
           <div>
             <label className="block text-xs font-medium text-slate-700 mb-1">Monthly Amortization (Override)</label>
             <input 
               type="number" 
               step="0.01" 
               name="monthlyAmortization" 
-              placeholder="Leave blank to auto-calculate (Principal / Terms)" 
+              defaultValue={editingInst?.monthlyAmortization} 
+              placeholder="Leave blank to auto-calculate" 
               className="w-full p-2 border rounded-lg text-sm" 
             />
             <p className="text-[10px] text-slate-400 mt-1">Enter exact bank amount including interest if different from simple division.</p>
           </div>
-          <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">Start Date</label>
-            <input required type="date" name="startDate" className="w-full p-2 border rounded-lg text-sm" />
+          
+          <div className="border-t pt-4 mt-4">
+            <h4 className="text-sm font-semibold text-slate-700 mb-2">How to Determine Start Date?</h4>
+            <div className="flex space-x-2 mb-4">
+              <button 
+                type="button"
+                onClick={() => setInstMode('date')}
+                className={cn(
+                  "flex-1 flex items-center justify-center gap-2 p-2 rounded-lg text-sm transition-colors",
+                  instMode === 'date' ? "bg-blue-600 text-white shadow-md" : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                )}
+              >
+                <Calendar className="w-4 h-4" /> Set Start Date
+              </button>
+              <button 
+                type="button"
+                onClick={() => setInstMode('term')}
+                className={cn(
+                  "flex-1 flex items-center justify-center gap-2 p-2 rounded-lg text-sm transition-colors",
+                  instMode === 'term' ? "bg-blue-600 text-white shadow-md" : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                )}
+              >
+                <Calculator className="w-4 h-4" /> Set Current Term
+              </button>
+            </div>
           </div>
-          <button type="submit" className="w-full bg-slate-900 text-white py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800">Add Installment</button>
+          
+          {instMode === 'date' && (
+            <div>
+              <label className="block text-xs font-medium text-slate-700 mb-1">Start Date (First Payment Month)</label>
+              <input 
+                required 
+                type="date" 
+                name="startDate" 
+                defaultValue={editingInst?.startDate} 
+                className="w-full p-2 border rounded-lg text-sm" 
+              />
+            </div>
+          )}
+
+          {instMode === 'term' && (
+            <div>
+              <label className="block text-xs font-medium text-slate-700 mb-1">Current Term (Month # for {format(viewDate, "MMMM yyyy")})</label>
+              <input 
+                required 
+                type="number" 
+                min="1"
+                max={tempTerms}
+                name="currentTerm" 
+                value={tempCurrentTerm}
+                onChange={(e) => setTempCurrentTerm(parseInt(e.target.value) || 1)}
+                placeholder="e.g. 12" 
+                className="w-full p-2 border rounded-lg text-sm" 
+              />
+              <input type="hidden" name="startDate" />
+              {tempCurrentTerm > 0 && tempCurrentTerm <= tempTerms && (
+                <p className="text-xs text-slate-500 mt-2 p-2 bg-blue-50 rounded-lg">
+                  <span className="font-medium">Calculated Start Date:</span> 
+                  {format(subMonths(viewDate, tempCurrentTerm - 1), "MMMM yyyy")}
+                  <span className="text-slate-400"> (Term 1)</span>
+                </p>
+              )}
+            </div>
+          )}
+
+          <button type="submit" className="w-full bg-slate-900 text-white py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800">
+            {editingInst ? "Update Installment" : "Add Installment"}
+          </button>
         </form>
       </Modal>
 
