@@ -114,12 +114,15 @@ export default function BillTrackerApp() {
 
   const togglePaid = (cardId: string) => {
     setStatements(prev => {
-      const existing = prev.find(s => s.cardId === cardId && s.monthStr === monthKey);
-      if (existing) {
-        return prev.map(s => s.id === existing.id ? { ...s, isPaid: !s.isPaid } : s);
-      }
-      const cardInstTotal = installments.filter(i => i.cardId === cardId && getInstallmentStatus(i, viewDate).isActive).reduce((acc, i) => acc + i.monthlyAmortization, 0);
-      return [...prev, { id: crypto.randomUUID(), cardId, monthStr: monthKey, amount: cardInstTotal, isPaid: true, isUnbilled: true }];
+        const existing = prev.find(s => s.cardId === cardId && s.monthStr === monthKey);
+        if (existing) {
+            const newIsPaid = !existing.isPaid;
+            // Automatically set to Billed status if paid
+            const updates = newIsPaid ? { isPaid: newIsPaid, isUnbilled: false } : { isPaid: newIsPaid };
+            return prev.map(s => s.id === existing.id ? { ...s, ...updates } : s);
+        }
+        const cardInstTotal = installments.filter(i => i.cardId === cardId && getInstallmentStatus(i, viewDate).isActive).reduce((acc, i) => acc + i.monthlyAmortization, 0);
+        return [...prev, { id: crypto.randomUUID(), cardId, monthStr: monthKey, amount: cardInstTotal, isPaid: true, isUnbilled: false }];
     });
   };
 
