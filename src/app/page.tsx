@@ -39,6 +39,7 @@ export interface Statement {
   amount: number;
   isPaid: boolean;
   customDueDate?: string;
+  isUnbilled?: boolean;
 }
 
 export interface Installment {
@@ -395,6 +396,7 @@ export default function BillTrackerApp() {
         monthStr: monthKey,
         amount: updates.amount !== undefined ? updates.amount : cardInstTotal,
         isPaid: false,
+        isUnbilled: true,
         ...updates
       }];
     });
@@ -416,7 +418,8 @@ export default function BillTrackerApp() {
         cardId,
         monthStr: monthKey,
         amount: cardInstTotal,
-        isPaid: true
+        isPaid: true,
+        isUnbilled: true
       }];
     });
   };
@@ -731,19 +734,46 @@ export default function BillTrackerApp() {
                       </div>
                     </td>
                     <td className="p-4">
-                      <div className="relative max-w-[140px]">
-                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-sm">₱</span>
-                        <input 
-                          type="number" 
-                          step="0.01"
-                          className="w-full pl-6 pr-2 py-1.5 bg-slate-100 border-transparent focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 rounded-lg text-sm transition-all font-medium text-slate-800"
-                          placeholder="0.00"
-                          value={displayAmount || ""}
-                          onChange={(e) => handleUpdateStatement(card.id, { amount: parseFloat(e.target.value) || 0 })}
-                          onBlur={(e) => {
-                             // Optional: format on blur if needed, currently raw input
-                          }}
-                        />
+                      <div className="space-y-2">
+                        <div className="relative max-w-[140px]">
+                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-sm">₱</span>
+                          <input 
+                            type="number" 
+                            step="0.01"
+                            className="w-full pl-6 pr-2 py-1.5 bg-slate-100 border-transparent focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 rounded-lg text-sm transition-all font-medium text-slate-800"
+                            placeholder="0.00"
+                            value={stmt ? (parseFloat(displayAmount.toFixed(2) || "")) : parseFloat(displayAmount.toFixed(2))}
+                            onChange={(e) => {
+                              const value = parseFloat(e.target.value);
+                              handleUpdateStatement(card.id, { amount: isNaN(value) ? 0 : value });
+                            }}
+                            onBlur={(e) => {
+                              const value = parseFloat(e.target.value);
+                              if (!isNaN(value)) {
+                                handleUpdateStatement(card.id, { amount: parseFloat(value.toFixed(2)) });
+                              }
+                            }}
+                          />
+                        </div>
+                        <div className="flex gap-1.5 flex-wrap">
+                          {!stmt && cardInstTotal > 0 && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-100 text-amber-700 text-[10px] font-semibold rounded-full border border-amber-200">
+                              Est.
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateStatement(card.id, { isUnbilled: stmt?.isUnbilled === false ? true : false })}
+                            className={cn(
+                              "inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-full border transition-all",
+                              stmt?.isUnbilled === false
+                                ? "bg-green-100 text-green-700 border-green-200 hover:bg-green-200"
+                                : "bg-blue-100 text-blue-600 border-blue-200 hover:bg-blue-200"
+                            )}
+                          >
+                            {stmt?.isUnbilled === false ? "Billed" : "Unbilled"}
+                          </button>
+                        </div>
                       </div>
                     </td>
                     <td className="p-4">
@@ -986,7 +1016,7 @@ export default function BillTrackerApp() {
                   return (
                     <tr key={inst.id} className="hover:bg-slate-50 group">
                       <td className="p-3 font-medium text-slate-800">{inst.name}</td>
-                      <td className="p-3 text-slate-600">{card?.bankName}</td>
+                      <td className="p-3 text-slate-600">{card ? `${card.bankName} - ${card.cardName}` : 'Unknown'}</td>
                       <td className="p-3">
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-mono w-12 text-right">{status.currentTerm > inst.terms ? "Done" : status.currentTerm < 1 ? "Pending" : `${status.currentTerm}/${inst.terms}`}</span>
@@ -1237,16 +1267,16 @@ export default function BillTrackerApp() {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">Monthly Amortization (Override)</label>
+            <label className="block text-xs font-medium text-slate-700 mb-1">Monthly Amortization (Optional Override)</label>
             <input 
               type="number" 
-              step="0.01" 
+              step="any" 
               name="monthlyAmortization" 
               defaultValue={editingInst?.monthlyAmortization} 
-              placeholder="Leave blank to auto-calculate" 
+              placeholder="Leave blank to auto-calculate (Principal ÷ Terms)" 
               className="w-full p-2 border rounded-lg text-sm" 
             />
-            <p className="text-[10px] text-slate-400 mt-1">Enter exact bank amount including interest if different from simple division.</p>
+            <p className="text-[10px] text-slate-400 mt-1">Optional: Enter the exact monthly payment amount if it differs from simple division (e.g., includes interest or fees). Leave blank to auto-calculate.</p>
           </div>
           
           <div className="border-t pt-4 mt-4">
