@@ -1,7 +1,7 @@
 import React from 'react';
 import { ArrowUpDown } from 'lucide-react';
-import type { SortConfig } from '../lib/types';
-import { cn } from '../lib/utils';
+import type { SortConfig } from '../../../lib/types';
+import { cn } from '../../../lib/utils';
 
 interface Props {
   label: string;

@@ -1,6 +1,6 @@
 import React from 'react';
-import Modal from '../components/Modal';
-import SortableHeader from '../components/SortableHeader';
+import Modal from '../app/_components/ui/Modal';
+import SortableHeader from '../app/_components/ui/SortableHeader';
 import { Plus, Trash2, Pencil, Users, Upload, Download, List as ListIcon, CreditCard as RawCardIcon } from 'lucide-react';
 import { cn, formatCurrency, getInstallmentStatus } from '../lib/utils';
 import type { CreditCard, Installment, Statement, SortConfig } from '../lib/types';

@@ -1,6 +1,6 @@
 import React from 'react';
 import { format, setDate, parseISO, isValid } from 'date-fns';
-import SortableHeader from '../components/SortableHeader';
+import SortableHeader from '../app/_components/ui/SortableHeader';
 import { FileSpreadsheet, CheckCircle2, Circle } from 'lucide-react';
 import { cn, formatCurrency } from '../lib/utils';
 import type { CreditCard, Installment, Statement, SortConfig } from '../lib/types';
