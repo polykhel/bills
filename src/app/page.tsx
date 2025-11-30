@@ -4,176 +4,21 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import { 
   format, addMonths, subMonths, setDate, 
   startOfMonth, endOfMonth, eachDayOfInterval, 
-  isSameDay, getDay, differenceInCalendarMonths, parseISO, isValid 
+  isSameDay, getDay, parseISO, isValid 
 } from "date-fns";
 import { 
   ChevronLeft, ChevronRight, Plus, Trash2, Pencil,
   CreditCard as CardIcon, List as ListIcon, 
   CheckCircle2, Circle, Users, UserPlus, User,
-  Download, Upload, FileSpreadsheet, ArrowUpDown, Calendar, Calculator
+  Download, Upload, FileSpreadsheet, Calendar, Calculator
 } from "lucide-react";
-import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
+import Modal from "../components/Modal";
+import SortableHeader from "../components/SortableHeader";
+import { cn, getInstallmentStatus, formatCurrency } from "../lib/utils";
+import { Storage } from "../lib/storage";
+import type { Profile, CreditCard, Statement, Installment, SortConfig } from "../lib/types";
 
-// --- Types ---
-
-export interface Profile {
-  id: string;
-  name: string;
-}
-
-export interface CreditCard {
-  id: string;
-  profileId: string;
-  bankName: string;
-  cardName: string;
-  dueDay: number;
-  cutoffDay: number;
-  color: string;
-}
-
-export interface Statement {
-  id: string;
-  cardId: string;
-  monthStr: string;
-  amount: number;
-  isPaid: boolean;
-  customDueDate?: string;
-  isUnbilled?: boolean;
-}
-
-export interface Installment {
-  id: string;
-  cardId: string;
-  name: string;
-  totalPrincipal: number;
-  terms: number;
-  monthlyAmortization: number;
-  startDate: string;
-}
-
-export interface InstallmentStatus {
-  currentTerm: number;
-  totalTerms: number;
-  monthlyAmount: number;
-  isActive: boolean;
-  isFinished: boolean;
-  isUpcoming: boolean;
-}
-
-type SortDirection = 'asc' | 'desc';
-
-interface SortConfig {
-  key: string;
-  direction: SortDirection;
-}
-
-// --- Utilities ---
-
-export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
-
-const KEYS = {
-  PROFILES: "bt_profiles",
-  CARDS: "bt_cards",
-  STATEMENTS: "bt_statements",
-  INSTALLMENTS: "bt_installments",
-};
-
-export const loadData = <T,>(key: string): T[] => {
-  if (typeof window === "undefined") return [];
-  try {
-    const item = localStorage.getItem(key);
-    return item ? JSON.parse(item) : [];
-  } catch (e) {
-    console.error("Error loading data", e);
-    return [];
-  }
-};
-
-export const saveData = <T,>(key: string, data: T[]) => {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(key, JSON.stringify(data));
-};
-
-export const Storage = {
-  getProfiles: () => loadData<Profile>(KEYS.PROFILES),
-  saveProfiles: (data: Profile[]) => saveData(KEYS.PROFILES, data),
-
-  getCards: () => loadData<CreditCard>(KEYS.CARDS),
-  saveCards: (data: CreditCard[]) => saveData(KEYS.CARDS, data),
-  
-  getStatements: () => loadData<Statement>(KEYS.STATEMENTS),
-  saveStatements: (data: Statement[]) => saveData(KEYS.STATEMENTS, data),
-  
-  getInstallments: () => loadData<Installment>(KEYS.INSTALLMENTS),
-  saveInstallments: (data: Installment[]) => saveData(KEYS.INSTALLMENTS, data),
-};
-
-export const getInstallmentStatus = (
-  inst: Installment,
-  viewDate: Date
-): InstallmentStatus => {
-  const start = parseISO(inst.startDate);
-  const currentMonth = startOfMonth(viewDate);
-  const startMonth = startOfMonth(start);
-
-  const diff = differenceInCalendarMonths(currentMonth, startMonth);
-  const currentTerm = diff + 1;
-
-  const isActive = currentTerm >= 1 && currentTerm <= inst.terms;
-  const isFinished = currentTerm > inst.terms;
-  const isUpcoming = currentTerm < 1;
-
-  return {
-    currentTerm,
-    totalTerms: inst.terms,
-    monthlyAmount: inst.monthlyAmortization,
-    isActive,
-    isFinished,
-    isUpcoming,
-  };
-};
-
-const formatCurrency = (amount: number) => {
-  return amount.toLocaleString(undefined, { 
-    minimumFractionDigits: 2, 
-    maximumFractionDigits: 2 
-  });
-};
-
-// --- Components ---
-
-const Modal = ({ isOpen, onClose, title, children }: any) => {
-  if (!isOpen) return null;
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200 max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center p-4 border-b bg-slate-50 sticky top-0 z-10">
-          <h3 className="font-semibold text-slate-800">{title}</h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600">✕</button>
-        </div>
-        <div className="p-4">{children}</div>
-      </div>
-    </div>
-  );
-};
-
-const SortableHeader = ({ label, sortKey, currentSort, onSort }: { label: string, sortKey: string, currentSort: SortConfig, onSort: (key: string) => void }) => {
-  const isActive = currentSort.key === sortKey;
-  return (
-    <th 
-      className="p-4 cursor-pointer hover:bg-slate-100 transition-colors select-none group"
-      onClick={() => onSort(sortKey)}
-    >
-      <div className="flex items-center gap-2">
-        {label}
-        <ArrowUpDown className={cn("w-3 h-3 transition-opacity", isActive ? "opacity-100 text-blue-600" : "opacity-30 group-hover:opacity-60")} />
-      </div>
-    </th>
-  );
-};
+// Components moved to `src/components`, utilities to `src/lib`.
 
 export default function BillTrackerApp() {
   // --- State ---
