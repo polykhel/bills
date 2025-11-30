@@ -28,7 +28,8 @@ export default function ProfileSelector({
           <p className="text-sm font-bold leading-none text-slate-800">{activeProfile?.name}</p>
         </div>
       </button>
-      <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-100 hidden group-hover:block p-1 z-50 animate-in fade-in zoom-in-95 duration-100">
+      <div className="absolute right-0 top-full pt-2 w-48 hidden group-hover:block z-50">
+        <div className="bg-white rounded-xl shadow-xl border border-slate-100 p-1 animate-in fade-in zoom-in-95 duration-100">
         {profiles.map(p => (
           <button
             key={p.id}
@@ -51,6 +52,7 @@ export default function ProfileSelector({
         >
           <UserPlus className="w-3 h-3" /> Create Profile
         </button>
+        </div>
       </div>
     </div>
   );
