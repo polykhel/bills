@@ -1,10 +1,11 @@
 "use client";
 
-import React, { createContext, useContext, useState, useMemo, useRef, ReactNode } from "react";
+import React, { createContext, useContext, useState, useMemo, useRef, ReactNode, useEffect } from "react";
 import { format, setDate, parseISO, isValid } from "date-fns";
 import { getInstallmentStatus } from "../lib/utils";
 import { useProfiles, useCards, useStatements, useInstallments } from "../lib/hooks";
 import type { CreditCard, Installment, Statement, SortConfig } from "../lib/types";
+import { Storage } from "../lib/storage";
 
 interface AppContextType {
   // Date state
@@ -88,6 +89,22 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [viewDate, setViewDate] = useState(new Date());
+
+  // Restore saved month on load, and persist changes
+  useEffect(() => {
+    const saved = Storage.getActiveMonthStr();
+    if (saved) {
+      const parsed = parseISO(`${saved}-01`);
+      if (isValid(parsed)) {
+        setViewDate(parsed);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    const monthStr = format(viewDate, "yyyy-MM");
+    Storage.saveActiveMonthStr(monthStr);
+  }, [viewDate]);
 
   // Custom hooks for data management
   const { profiles, activeProfileId, setActiveProfileId, addProfile, isLoaded } = useProfiles();

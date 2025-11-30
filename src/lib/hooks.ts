@@ -17,7 +17,10 @@ export function useProfiles() {
       Storage.saveProfiles(loadedProfiles);
       initialProfileId = defaultProfile.id;
     } else {
-      initialProfileId = loadedProfiles[0].id;
+      // Try to restore last active profile
+      const savedActive = Storage.getActiveProfileId();
+      const exists = savedActive && loadedProfiles.some(p => p.id === savedActive);
+      initialProfileId = exists ? (savedActive as string) : loadedProfiles[0].id;
     }
     
     setProfiles(loadedProfiles);
@@ -30,6 +33,12 @@ export function useProfiles() {
       Storage.saveProfiles(profiles);
     }
   }, [profiles, isLoaded]);
+
+  useEffect(() => {
+    if (isLoaded && activeProfileId) {
+      Storage.saveActiveProfileId(activeProfileId);
+    }
+  }, [activeProfileId, isLoaded]);
 
   const addProfile = (name: string) => {
     const newProfile = { id: crypto.randomUUID(), name };
