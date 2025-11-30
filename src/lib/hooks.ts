@@ -72,7 +72,7 @@ export function useCards(activeProfileId: string, isLoaded: boolean) {
   }, [cards, isLoaded]);
 
   const addCard = (card: Omit<CreditCard, "id">) => {
-    const newCard: CreditCard = { id: crypto.randomUUID(), ...card };
+    const newCard: CreditCard = { ...card, id: crypto.randomUUID() };
     setCards(prev => [...prev, newCard]);
   };
 
@@ -177,7 +177,7 @@ export function useInstallments(isLoaded: boolean) {
   }, [installments, isLoaded]);
 
   const addInstallment = (installment: Omit<Installment, "id">) => {
-    const newInst: Installment = { id: crypto.randomUUID(), ...installment };
+    const newInst: Installment = { ...installment, id: crypto.randomUUID() };
     setInstallments(prev => [...prev, newInst]);
   };
 

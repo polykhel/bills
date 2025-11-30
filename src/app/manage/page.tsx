@@ -47,7 +47,10 @@ export default function ManagePage() {
     }
   });
 
-  const sortedManageInstallments = [...installments].sort((a, b) => {
+  const activeCardIds = new Set(activeCards.map(c => c.id));
+  const filteredInstallments = installments.filter(inst => activeCardIds.has(inst.cardId));
+  
+  const sortedManageInstallments = [...filteredInstallments].sort((a, b) => {
     const dir = manageInstSort.direction === 'asc' ? 1 : -1;
     const cardA = activeCards.find(c => c.id === a.cardId)?.bankName || '';
     const cardB = activeCards.find(c => c.id === b.cardId)?.bankName || '';
