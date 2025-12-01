@@ -80,6 +80,7 @@ export default function DashboardPage() {
                 <SortableHeader label="Card" sortKey="bankName" currentSort={dashboardSort} onSort={(k) => setDashboardSort({ key: k, direction: dashboardSort.key === k && dashboardSort.direction === 'asc' ? 'desc' : 'asc' })} />
                 <SortableHeader label="Due Date" sortKey="dueDate" currentSort={dashboardSort} onSort={(k) => setDashboardSort({ key: k, direction: dashboardSort.key === k && dashboardSort.direction === 'asc' ? 'desc' : 'asc' })} />
                 <SortableHeader label="Statement Balance" sortKey="amount" currentSort={dashboardSort} onSort={(k) => setDashboardSort({ key: k, direction: dashboardSort.key === k && dashboardSort.direction === 'asc' ? 'desc' : 'asc' })} />
+                <th className="p-4">Amount Due</th>
                 <th className="p-4 w-1/4">Active Installments</th>
                 <SortableHeader label="Status" sortKey="status" currentSort={dashboardSort} onSort={(k) => setDashboardSort({ key: k, direction: dashboardSort.key === k && dashboardSort.direction === 'asc' ? 'desc' : 'asc' })} />
               </tr>
@@ -158,6 +159,39 @@ export default function DashboardPage() {
                       </div>
                     </td>
                     <td className="p-4">
+                      <div className="space-y-2">
+                        <div className="relative max-w-[140px]">
+                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-sm">₱</span>
+                          <input 
+                            type="number" 
+                            step="0.01"
+                            className="w-full pl-6 pr-2 py-1.5 bg-slate-100 border-transparent focus:bg-white focus:border-purple-500 focus:ring-2 focus:ring-purple-200 rounded-lg text-sm transition-all font-medium text-slate-800"
+                            placeholder={displayAmount.toFixed(2)}
+                            value={stmt?.adjustedAmount !== undefined ? stmt.adjustedAmount : ''}
+                            onChange={(e) => {
+                              const value = e.target.value === '' ? undefined : parseFloat(e.target.value);
+                              handleUpdateStatement(card.id, { adjustedAmount: value === undefined ? undefined : (isNaN(value) ? 0 : value) });
+                            }}
+                            onBlur={(e) => {
+                              const value = e.target.value === '' ? undefined : parseFloat(e.target.value);
+                              if (value !== undefined && !isNaN(value)) {
+                                handleUpdateStatement(card.id, { adjustedAmount: parseFloat(value.toFixed(2)) });
+                              }
+                            }}
+                          />
+                        </div>
+                        {stmt?.adjustedAmount !== undefined && stmt.adjustedAmount !== displayAmount && (
+                          <div className="text-[10px] text-slate-500">
+                            {stmt.adjustedAmount < displayAmount ? (
+                              <span className="text-green-600">-₱{formatCurrency(displayAmount - stmt.adjustedAmount)} saved</span>
+                            ) : (
+                              <span className="text-amber-600">+₱{formatCurrency(stmt.adjustedAmount - displayAmount)} extra</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="p-4">
                       <div className="space-y-1">
                         {cardInsts.map((inst: any) => (
                           <div key={inst.id} className="flex items-center justify-between text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded border border-blue-100">
@@ -187,7 +221,7 @@ export default function DashboardPage() {
               })}
               {activeCards.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="p-8 text-center text-slate-500">
+                  <td colSpan={6} className="p-8 text-center text-slate-500">
                     No cards found for this profile.
                   </td>
                 </tr>

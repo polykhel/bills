@@ -21,6 +21,7 @@ export interface Statement {
   isPaid: boolean;
   customDueDate?: string;
   isUnbilled?: boolean;
+  adjustedAmount?: number;
 }
 
 export interface Installment {

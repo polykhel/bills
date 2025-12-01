@@ -144,8 +144,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const stmt = monthlyStatements.find(s => s.cardId === card.id);
       const cardInstTotal = visibleInstallments.filter(i => i.cardId === card.id).reduce((acc, i) => acc + i.monthlyAmortization, 0);
       const effectiveAmount = stmt ? stmt.amount : cardInstTotal;
+      const amountDue = stmt?.adjustedAmount !== undefined ? stmt.adjustedAmount : effectiveAmount;
       billTotal += effectiveAmount;
-      if (!stmt?.isPaid) unpaidTotal += effectiveAmount;
+      if (!stmt?.isPaid) unpaidTotal += amountDue;
     });
     return { billTotal, unpaidTotal, installmentTotal };
   }, [activeCards, monthlyStatements, activeInstallments]);
@@ -306,7 +307,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const handleExportMonthCSV = () => {
-    const headers = ["Card", "Bank", "Due Date", "Amount", "Status", "Installments Included"];
+    const headers = ["Card", "Bank", "Due Date", "Statement Balance", "Amount Due", "Status", "Installments Included"];
     const rows = activeCards.map(card => {
       const stmt = monthlyStatements.find(s => s.cardId === card.id);
       const defaultDate = setDate(viewDate, card.dueDay);
@@ -314,12 +315,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const formattedDate = isValid(displayDate) ? format(displayDate, "yyyy-MM-dd") : "";
       const cardInstTotal = getCardInstallmentTotal(card.id);
       const displayAmount = stmt ? stmt.amount : cardInstTotal;
+      const amountDue = stmt?.adjustedAmount !== undefined ? stmt.adjustedAmount : displayAmount;
       const status = stmt?.isPaid ? "Paid" : "Unpaid";
       return [
         `\"${card.cardName}\"`,
         `\"${card.bankName}\"`,
         formattedDate,
         displayAmount.toFixed(2),
+        amountDue.toFixed(2),
         status,
         cardInstTotal.toFixed(2)
       ].join(",");

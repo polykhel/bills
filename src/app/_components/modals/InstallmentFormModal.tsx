@@ -110,7 +110,8 @@ export default function InstallmentFormModal({
               type="number"
               step="0.01"
               name="principal"
-              defaultValue={editingInstallment?.totalPrincipal}
+              defaultValue={editingInstallment?.totalPrincipal ?? ''}
+              placeholder="0.00"
               className="w-full p-2 border rounded-lg text-sm"
             />
           </div>
@@ -123,8 +124,8 @@ export default function InstallmentFormModal({
               type="number"
               name="terms"
               min="1"
-              defaultValue={editingInstallment?.terms ?? tempTerms}
-              onChange={(e) => setTempTerms(parseInt(e.target.value))}
+              defaultValue={editingInstallment?.terms ?? ''}
+              onChange={(e) => setTempTerms(parseInt(e.target.value) || 12)}
               placeholder="12, 24, 36"
               className="w-full p-2 border rounded-lg text-sm"
             />
@@ -139,7 +140,7 @@ export default function InstallmentFormModal({
             type="number"
             step="any"
             name="monthlyAmortization"
-            defaultValue={editingInstallment?.monthlyAmortization}
+            defaultValue={editingInstallment?.monthlyAmortization ?? ''}
             placeholder="Leave blank to auto-calculate (Principal ÷ Terms)"
             className="w-full p-2 border rounded-lg text-sm"
           />

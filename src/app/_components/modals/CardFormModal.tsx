@@ -80,7 +80,8 @@ export default function CardFormModal({
               min="1"
               max="31"
               name="dueDay"
-              defaultValue={editingCard?.dueDay}
+              defaultValue={editingCard?.dueDay ?? ''}
+              placeholder="15"
               className="w-full p-2 border rounded-lg text-sm"
             />
           </div>
@@ -94,7 +95,8 @@ export default function CardFormModal({
               min="1"
               max="31"
               name="cutoffDay"
-              defaultValue={editingCard?.cutoffDay}
+              defaultValue={editingCard?.cutoffDay ?? ''}
+              placeholder="10"
               className="w-full p-2 border rounded-lg text-sm"
             />
           </div>
