@@ -1,10 +1,12 @@
-import type { Profile, CreditCard, Statement, Installment } from './types';
+import type { Profile, CreditCard, Statement, Installment, BankBalance } from './types';
 
 const KEYS = {
   PROFILES: 'bt_profiles',
   CARDS: 'bt_cards',
   STATEMENTS: 'bt_statements',
   INSTALLMENTS: 'bt_installments',
+  BANK_BALANCES: 'bt_bank_balances',
+  BANK_BALANCE_TRACKING_ENABLED: 'bt_bank_balance_tracking_enabled',
   ACTIVE_PROFILE_ID: 'bt_active_profile_id',
   ACTIVE_MONTH: 'bt_active_month',
   MULTI_PROFILE_MODE: 'bt_multi_profile_mode',
@@ -101,6 +103,9 @@ export const Storage = {
   getInstallments: () => loadData<Installment>(KEYS.INSTALLMENTS),
   saveInstallments: (data: Installment[]) => saveData(KEYS.INSTALLMENTS, data),
 
+  getBankBalances: () => loadData<BankBalance>(KEYS.BANK_BALANCES),
+  saveBankBalances: (data: BankBalance[]) => saveData(KEYS.BANK_BALANCES, data),
+
   // Active selections
   getActiveProfileId: (): string | null => loadString(KEYS.ACTIVE_PROFILE_ID),
   saveActiveProfileId: (id: string) => saveString(KEYS.ACTIVE_PROFILE_ID, id),
@@ -112,6 +117,10 @@ export const Storage = {
   saveMultiProfileMode: (enabled: boolean) => saveBoolean(KEYS.MULTI_PROFILE_MODE, enabled),
   getSelectedProfileIds: (): string[] => loadStringArray(KEYS.SELECTED_PROFILE_IDS),
   saveSelectedProfileIds: (ids: string[]) => saveStringArray(KEYS.SELECTED_PROFILE_IDS, ids),
+
+  // Bank balance tracking
+  getBankBalanceTrackingEnabled: (): boolean => loadBoolean(KEYS.BANK_BALANCE_TRACKING_ENABLED),
+  saveBankBalanceTrackingEnabled: (enabled: boolean) => saveBoolean(KEYS.BANK_BALANCE_TRACKING_ENABLED, enabled),
 };
 
 export { KEYS };

@@ -21,6 +21,11 @@ export default function DashboardPage() {
     handleUpdateStatement,
     handleTogglePaid,
     handleExportMonthCSV,
+    bankBalanceTrackingEnabled,
+    setBankBalanceTrackingEnabled,
+    currentBankBalance,
+    updateBankBalance,
+    balanceStatus,
     isLoaded,
   } = useApp();
 
@@ -50,7 +55,57 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className={cn("grid gap-4", bankBalanceTrackingEnabled ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-4" : "grid-cols-1 md:grid-cols-3")}>
+        {bankBalanceTrackingEnabled && (
+          <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-slate-500 text-sm font-medium">Bank Balance</p>
+              <button
+                onClick={() => setBankBalanceTrackingEnabled(false)}
+                className="text-slate-400 hover:text-slate-600 text-xs"
+                title="Disable bank balance tracking"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="relative max-w-[200px]">
+              <span className="absolute left-0 top-1/2 -translate-y-1/2 text-slate-800 text-2xl font-bold">₱</span>
+              <input 
+                type="number" 
+                step="0.01"
+                className="w-full pl-5 pr-2 py-0 bg-transparent border-none focus:bg-slate-50 focus:ring-2 focus:ring-blue-200 rounded-lg text-3xl font-bold text-slate-800 transition-all"
+                placeholder="0.00"
+                value={currentBankBalance || ''}
+                onChange={(e) => {
+                  const value = parseFloat(e.target.value);
+                  updateBankBalance(isNaN(value) ? 0 : value);
+                }}
+                onBlur={(e) => {
+                  const value = parseFloat(e.target.value);
+                  if (!isNaN(value)) {
+                    updateBankBalance(parseFloat(value.toFixed(2)));
+                  }
+                }}
+              />
+            </div>
+            <div className={cn(
+              "text-xs mt-2 font-medium flex items-center gap-1",
+              balanceStatus.isEnough ? "text-green-600" : "text-rose-600"
+            )}>
+              {balanceStatus.isEnough ? (
+                <>
+                  <span>✓</span>
+                  <span>₱{formatCurrency(balanceStatus.difference)} remaining</span>
+                </>
+              ) : (
+                <>
+                  <span>⚠</span>
+                  <span>₱{formatCurrency(Math.abs(balanceStatus.difference))} short</span>
+                </>
+              )}
+            </div>
+          </div>
+        )}
         <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
           <p className="text-slate-500 text-sm font-medium">Total Statement Balance</p>
           <p className="text-3xl font-bold text-slate-800 mt-2">₱{formatCurrency(totals.billTotal)}</p>
@@ -65,6 +120,15 @@ export default function DashboardPage() {
           <p className="text-xs text-slate-400 mt-1">Included in statements if billed</p>
         </div>
       </div>
+      
+      {!bankBalanceTrackingEnabled && (
+        <button
+          onClick={() => setBankBalanceTrackingEnabled(true)}
+          className="w-full bg-blue-50 border-2 border-dashed border-blue-200 hover:border-blue-300 hover:bg-blue-100 text-blue-600 px-4 py-3 rounded-xl transition-all text-sm font-medium"
+        >
+          + Enable Bank Balance Tracking
+        </button>
+      )}
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="flex justify-between items-center px-6 py-4 border-b border-slate-100 bg-slate-50/50">

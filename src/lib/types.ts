@@ -34,6 +34,13 @@ export interface Installment {
   startDate: string;
 }
 
+export interface BankBalance {
+  id: string;
+  profileId: string;
+  monthStr: string;
+  balance: number;
+}
+
 export interface InstallmentStatus {
   currentTerm: number;
   totalTerms: number;

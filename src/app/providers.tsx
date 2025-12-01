@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useMemo, useRef, ReactNode, useEffect } from "react";
 import { format, setDate, parseISO, isValid } from "date-fns";
 import { getInstallmentStatus } from "../lib/utils";
-import { useProfiles, useCards, useStatements, useInstallments } from "../lib/hooks";
+import { useProfiles, useCards, useStatements, useInstallments, useBankBalances } from "../lib/hooks";
 import type { CreditCard, Installment, Statement, SortConfig } from "../lib/types";
 import { Storage } from "../lib/storage";
 
@@ -47,6 +47,13 @@ interface AppContextType {
   updateInstallment: (id: string, updates: Partial<Installment>) => void;
   deleteInstallment: (id: string) => void;
   deleteInstallmentsForCard: (cardId: string) => void;
+
+  // Bank balances
+  bankBalanceTrackingEnabled: boolean;
+  setBankBalanceTrackingEnabled: (enabled: boolean) => void;
+  currentBankBalance: number;
+  updateBankBalance: (balance: number) => void;
+  balanceStatus: { difference: number; isEnough: boolean };
 
   // Modal state
   editingCard: CreditCard | null;
@@ -127,16 +134,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const { cards, activeCards, addCard, updateCard, deleteCard: deleteCardBase, transferCard, getCardsForProfiles } = useCards(activeProfileId, isLoaded);
   const { statements, updateStatement, togglePaid, deleteStatementsForCard } = useStatements(isLoaded);
   const { installments, addInstallment, updateInstallment, deleteInstallment: deleteInstallmentBase, deleteInstallmentsForCard } = useInstallments(isLoaded);
+  const { bankBalances, updateBankBalance: updateBankBalanceBase, getBankBalance, getBalancesForProfiles } = useBankBalances(isLoaded);
 
   // Multi-profile mode state
   const [multiProfileMode, setMultiProfileMode] = useState(false);
   const [selectedProfileIds, setSelectedProfileIds] = useState<string[]>([]);
 
+  // Bank balance tracking state
+  const [bankBalanceTrackingEnabled, setBankBalanceTrackingEnabled] = useState(false);
+
   // Load multi-profile settings on mount
   useEffect(() => {
     const savedMode = Storage.getMultiProfileMode();
     const savedIds = Storage.getSelectedProfileIds();
+    const savedBankBalanceTracking = Storage.getBankBalanceTrackingEnabled();
     setMultiProfileMode(savedMode);
+    setBankBalanceTrackingEnabled(savedBankBalanceTracking);
     if (savedIds.length > 0) {
       setSelectedProfileIds(savedIds);
     }
@@ -150,6 +163,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     Storage.saveSelectedProfileIds(selectedProfileIds);
   }, [selectedProfileIds]);
+
+  useEffect(() => {
+    Storage.saveBankBalanceTrackingEnabled(bankBalanceTrackingEnabled);
+  }, [bankBalanceTrackingEnabled]);
 
   // Modal state
   const [editingCard, setEditingCard] = useState<CreditCard | null>(null);
@@ -200,6 +217,34 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return { billTotal, unpaidTotal, installmentTotal };
   }, [visibleCards, monthlyStatements, activeInstallments]);
 
+  // Bank balance calculations
+  const currentBankBalance = useMemo(() => {
+    if (multiProfileMode && selectedProfileIds.length > 0) {
+      return getBalancesForProfiles(selectedProfileIds, monthKey);
+    }
+    return getBankBalance(activeProfileId, monthKey);
+  }, [multiProfileMode, selectedProfileIds, activeProfileId, monthKey, getBankBalance, getBalancesForProfiles, bankBalances]);
+
+  const balanceStatus = useMemo(() => {
+    const difference = currentBankBalance - totals.unpaidTotal;
+    return {
+      difference,
+      isEnough: difference >= 0,
+    };
+  }, [currentBankBalance, totals.unpaidTotal]);
+
+  const handleUpdateBankBalance = (balance: number) => {
+    if (multiProfileMode && selectedProfileIds.length > 0) {
+      // In multi-profile mode, update the first selected profile's balance
+      // You may want to show a warning or handle this differently
+      if (selectedProfileIds.length > 0) {
+        updateBankBalanceBase(selectedProfileIds[0], monthKey, balance);
+      }
+    } else {
+      updateBankBalanceBase(activeProfileId, monthKey, balance);
+    }
+  };
+
   // Handler functions
   const handleUpdateStatement = (cardId: string, updates: any) => {
     updateStatement(cardId, monthKey, updates);
@@ -207,6 +252,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const handleTogglePaid = (cardId: string) => {
     const cardInstTotal = getCardInstallmentTotal(cardId);
+    const stmt = monthlyStatements.find(s => s.cardId === cardId);
+    const effectiveAmount = stmt ? stmt.amount : cardInstTotal;
+    const amountDue = stmt?.adjustedAmount !== undefined ? stmt.adjustedAmount : effectiveAmount;
+    const wasPaid = stmt?.isPaid || false;
+    
+    // If bank balance tracking is enabled, update the balance
+    if (bankBalanceTrackingEnabled) {
+      if (!wasPaid) {
+        // Marking as paid: subtract from balance
+        const newBalance = currentBankBalance - amountDue;
+        handleUpdateBankBalance(newBalance);
+      } else {
+        // Unmarking as paid: add back to balance
+        const newBalance = currentBankBalance + amountDue;
+        handleUpdateBankBalance(newBalance);
+      }
+    }
+    
     togglePaid(cardId, monthKey, cardInstTotal);
   };
 
@@ -441,6 +504,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     updateInstallment,
     deleteInstallment: deleteInstallmentBase,
     deleteInstallmentsForCard,
+    bankBalanceTrackingEnabled,
+    setBankBalanceTrackingEnabled,
+    currentBankBalance,
+    updateBankBalance: handleUpdateBankBalance,
+    balanceStatus,
     editingCard,
     setEditingCard,
     editingInst,

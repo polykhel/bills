@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Storage } from "./storage";
-import type { Profile, CreditCard, Statement, Installment } from "./types";
+import type { Profile, CreditCard, Statement, Installment, BankBalance } from "./types";
 
 export function useProfiles() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
@@ -222,5 +222,52 @@ export function useInstallments(isLoaded: boolean) {
     updateInstallment,
     deleteInstallment,
     deleteInstallmentsForCard,
+  };
+}
+
+export function useBankBalances(isLoaded: boolean) {
+  const [bankBalances, setBankBalances] = useState<BankBalance[]>([]);
+
+  useEffect(() => {
+    setBankBalances(Storage.getBankBalances());
+  }, []);
+
+  useEffect(() => {
+    if (isLoaded) {
+      Storage.saveBankBalances(bankBalances);
+    }
+  }, [bankBalances, isLoaded]);
+
+  const updateBankBalance = (profileId: string, monthStr: string, balance: number) => {
+    setBankBalances(prev => {
+      const existing = prev.find(b => b.profileId === profileId && b.monthStr === monthStr);
+      if (existing) {
+        return prev.map(b => b.id === existing.id ? { ...b, balance } : b);
+      }
+      return [...prev, {
+        id: crypto.randomUUID(),
+        profileId,
+        monthStr,
+        balance,
+      }];
+    });
+  };
+
+  const getBankBalance = (profileId: string, monthStr: string): number => {
+    const balance = bankBalances.find(b => b.profileId === profileId && b.monthStr === monthStr);
+    return balance?.balance ?? 0;
+  };
+
+  const getBalancesForProfiles = (profileIds: string[], monthStr: string): number => {
+    return bankBalances
+      .filter(b => profileIds.includes(b.profileId) && b.monthStr === monthStr)
+      .reduce((sum, b) => sum + b.balance, 0);
+  };
+
+  return {
+    bankBalances,
+    updateBankBalance,
+    getBankBalance,
+    getBalancesForProfiles,
   };
 }
