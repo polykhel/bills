@@ -42,6 +42,18 @@ Import/Export (JSON): Backup your profile data to a JSON file or transfer it to 
 
 Local Storage: Data persists across sessions without requiring a login or backend server.
 
+🔄 Sync & Backup (New!)
+
+Manual Sync: Export encrypted backups and sync via any cloud storage (Dropbox, iCloud, Google Drive, etc.)
+
+Auto-Sync: Optional Google Drive integration for automatic backup every 5 minutes
+
+End-to-End Encryption: All data is encrypted with your password before uploading (AES-GCM 256-bit)
+
+Privacy-First: Data is stored in encrypted format - no one can read it without your password
+
+See [SYNC_SETUP.md](./SYNC_SETUP.md) for detailed setup instructions.
+
 Tech Stack
 
 Framework: React (Next.js App Router structure)

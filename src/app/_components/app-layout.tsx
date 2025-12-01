@@ -45,6 +45,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     { name: "Dashboard", href: "/dashboard" },
     { name: "Calendar", href: "/calendar" },
     { name: "Manage", href: "/manage" },
+    { name: "Sync", href: "/sync" },
   ];
 
   if (!isLoaded) {

@@ -26,7 +26,7 @@ export default function InstallmentFormModal({
 }: InstallmentFormModalProps) {
   const [instMode, setInstMode] = useState<'date' | 'term'>('date');
   const [tempCurrentTerm, setTempCurrentTerm] = useState<number>(currentTerm);
-  const [tempTerms, setTempTerms] = useState<number>(editingInstallment?.terms || 12);
+  const [tempTerms, setTempTerms] = useState<number>(editingInstallment?.terms ?? 12);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -117,7 +117,7 @@ export default function InstallmentFormModal({
               type="number"
               name="terms"
               min="1"
-              defaultValue={editingInstallment?.terms || tempTerms}
+              defaultValue={editingInstallment?.terms ?? tempTerms}
               onChange={(e) => setTempTerms(parseInt(e.target.value))}
               placeholder="12, 24, 36"
               className="w-full p-2 border rounded-lg text-sm"
