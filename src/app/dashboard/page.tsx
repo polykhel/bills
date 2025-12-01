@@ -144,7 +144,7 @@ export default function DashboardPage() {
                           )}
                           <button
                             type="button"
-                            onClick={() => handleUpdateStatement(card.id, { isUnbilled: stmt?.isUnbilled === false ? true : false })}
+                            onClick={() => handleUpdateStatement(card.id, { isUnbilled: stmt?.isUnbilled === false ? true : false, amount: stmt?.amount ?? cardInstTotal })}
                             className={cn(
                               'inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-full border transition-all',
                               stmt?.isUnbilled === false

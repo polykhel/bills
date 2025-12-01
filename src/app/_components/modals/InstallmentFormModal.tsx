@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { format, subMonths } from "date-fns";
 import { Calendar, Calculator } from "lucide-react";
 import Modal from "../ui/Modal";
@@ -27,6 +27,12 @@ export default function InstallmentFormModal({
   const [instMode, setInstMode] = useState<'date' | 'term'>('date');
   const [tempCurrentTerm, setTempCurrentTerm] = useState<number>(currentTerm);
   const [tempTerms, setTempTerms] = useState<number>(editingInstallment?.terms ?? 12);
+
+  // Reset tempCurrentTerm when editingInstallment or currentTerm changes
+  useEffect(() => {
+    setTempCurrentTerm(currentTerm);
+    setTempTerms(editingInstallment?.terms ?? 12);
+  }, [editingInstallment, currentTerm]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
