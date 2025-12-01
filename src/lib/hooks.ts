@@ -97,7 +97,15 @@ export function useCards(activeProfileId: string, isLoaded: boolean) {
     return false;
   };
 
+  const transferCard = (cardId: string, targetProfileId: string) => {
+    setCards(prev => prev.map(c => c.id === cardId ? { ...c, profileId: targetProfileId } : c));
+  };
+
   const activeCards = cards.filter(c => c.profileId === activeProfileId);
+
+  const getCardsForProfiles = (profileIds: string[]) => {
+    return cards.filter(c => profileIds.includes(c.profileId));
+  };
 
   return {
     cards,
@@ -105,6 +113,8 @@ export function useCards(activeProfileId: string, isLoaded: boolean) {
     addCard,
     updateCard,
     deleteCard,
+    transferCard,
+    getCardsForProfiles,
   };
 }
 

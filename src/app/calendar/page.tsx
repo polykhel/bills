@@ -7,7 +7,9 @@ import { useApp } from "../providers";
 export default function CalendarPage() {
   const {
     viewDate,
-    activeCards,
+    visibleCards,
+    profiles,
+    multiProfileMode,
     monthlyStatements,
     getCardInstallmentTotal,
     isLoaded,
@@ -36,7 +38,7 @@ export default function CalendarPage() {
         {days.map(day => {
           const dayNum = day.getDate();
           const isToday = isSameDay(day, new Date());
-          const cardsDue = activeCards.filter(c => {
+          const cardsDue = visibleCards.filter(c => {
             const stmt = monthlyStatements.find(s => s.cardId === c.id);
             let targetDate = setDate(viewDate, c.dueDay);
             if (stmt?.customDueDate) targetDate = parseISO(stmt.customDueDate);
@@ -59,6 +61,7 @@ export default function CalendarPage() {
                   const stmt = monthlyStatements.find(s => s.cardId === c.id);
                   const paid = stmt?.isPaid;
                   const amount = stmt ? stmt.amount : getCardInstallmentTotal(c.id);
+                  const profile = profiles.find(p => p.id === c.profileId);
                   return (
                     <div 
                       key={c.id} 
@@ -66,10 +69,13 @@ export default function CalendarPage() {
                         'text-[10px] px-1.5 py-1 rounded border-l-2 flex flex-col',
                         paid ? 'bg-green-50 text-green-700 border-green-500 opacity-60' : 'bg-slate-100 text-slate-700 border-slate-500'
                       )}
-                      title={`${c.bankName} - ${c.cardName}`}
+                      title={`${c.bankName} - ${c.cardName}${multiProfileMode && profile ? ` (${profile.name})` : ''}`}
                     >
                       <span className="font-semibold truncate">{c.bankName}</span>
                       <span className="font-mono">{amount > 0 ? `₱${formatCurrency(amount)}` : '₱-'}</span>
+                      {multiProfileMode && profile && (
+                        <span className="text-[8px] text-purple-600 font-medium truncate">{profile.name}</span>
+                      )}
                     </div>
                   );
                 })}

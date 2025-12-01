@@ -1,6 +1,7 @@
 import { CreditCard as CardIcon } from "lucide-react";
 import MonthNavigator from "./MonthNavigator";
 import ProfileSelector from "./ProfileSelector";
+import MultiProfileSelector from "./MultiProfileSelector";
 import type { Profile } from "../../../lib/types";
 
 interface HeaderProps {
@@ -10,6 +11,10 @@ interface HeaderProps {
   activeProfileId: string;
   onProfileChange: (profileId: string) => void;
   onCreateProfile: () => void;
+  multiProfileMode: boolean;
+  selectedProfileIds: string[];
+  onToggleMultiProfileMode: () => void;
+  onToggleProfileSelection: (profileId: string) => void;
 }
 
 export default function Header({
@@ -19,6 +24,10 @@ export default function Header({
   activeProfileId,
   onProfileChange,
   onCreateProfile,
+  multiProfileMode,
+  selectedProfileIds,
+  onToggleMultiProfileMode,
+  onToggleProfileSelection,
 }: HeaderProps) {
   return (
     <header className="bg-white border-b border-slate-200 sticky top-0 z-40">
@@ -34,11 +43,20 @@ export default function Header({
 
         <div className="flex items-center gap-4">
           <MonthNavigator viewDate={viewDate} onDateChange={onDateChange} />
-          <ProfileSelector
+          {!multiProfileMode && (
+            <ProfileSelector
+              profiles={profiles}
+              activeProfileId={activeProfileId}
+              onProfileChange={onProfileChange}
+              onCreateProfile={onCreateProfile}
+            />
+          )}
+          <MultiProfileSelector
             profiles={profiles}
-            activeProfileId={activeProfileId}
-            onProfileChange={onProfileChange}
-            onCreateProfile={onCreateProfile}
+            multiProfileMode={multiProfileMode}
+            selectedProfileIds={selectedProfileIds}
+            onToggleMode={onToggleMultiProfileMode}
+            onToggleProfile={onToggleProfileSelection}
           />
         </div>
       </div>

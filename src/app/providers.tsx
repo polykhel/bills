@@ -20,11 +20,20 @@ interface AppContextType {
   addProfile: (name: string) => void;
   isLoaded: boolean;
 
+  // Multi-profile mode
+  multiProfileMode: boolean;
+  setMultiProfileMode: (enabled: boolean) => void;
+  selectedProfileIds: string[];
+  setSelectedProfileIds: (ids: string[]) => void;
+  toggleProfileSelection: (profileId: string) => void;
+
   cards: ReturnType<typeof useCards>['cards'];
   activeCards: ReturnType<typeof useCards>['activeCards'];
+  visibleCards: CreditCard[];
   addCard: (card: Omit<CreditCard, "id">) => void;
   updateCard: (id: string, updates: Partial<CreditCard>) => void;
   deleteCard: (id: string) => void;
+  transferCard: (cardId: string, targetProfileId: string) => void;
 
   statements: ReturnType<typeof useStatements>['statements'];
   monthlyStatements: any[];
@@ -71,6 +80,7 @@ interface AppContextType {
   handleSaveProfile: (name: string) => void;
   handleDeleteCard: (id: string) => void;
   handleDeleteInstallment: (id: string) => void;
+  handleTransferCard: (cardId: string, targetProfileId: string) => void;
   handleExportProfile: () => void;
   handleImportProfile: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleExportMonthCSV: () => void;
@@ -80,6 +90,12 @@ interface AppContextType {
   openEditCard: (card: CreditCard) => void;
   openAddInst: () => void;
   openEditInst: (inst: Installment) => void;
+  openTransferCard: (card: CreditCard) => void;
+
+  // Transfer modal state
+  transferringCard: CreditCard | null;
+  showTransferModal: boolean;
+  setShowTransferModal: (show: boolean) => void;
 
   // Ref for file input
   fileInputRef: React.RefObject<HTMLInputElement | null>;
@@ -108,9 +124,32 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // Custom hooks for data management
   const { profiles, activeProfileId, setActiveProfileId, addProfile, isLoaded } = useProfiles();
-  const { cards, activeCards, addCard, updateCard, deleteCard: deleteCardBase } = useCards(activeProfileId, isLoaded);
+  const { cards, activeCards, addCard, updateCard, deleteCard: deleteCardBase, transferCard, getCardsForProfiles } = useCards(activeProfileId, isLoaded);
   const { statements, updateStatement, togglePaid, deleteStatementsForCard } = useStatements(isLoaded);
   const { installments, addInstallment, updateInstallment, deleteInstallment: deleteInstallmentBase, deleteInstallmentsForCard } = useInstallments(isLoaded);
+
+  // Multi-profile mode state
+  const [multiProfileMode, setMultiProfileMode] = useState(false);
+  const [selectedProfileIds, setSelectedProfileIds] = useState<string[]>([]);
+
+  // Load multi-profile settings on mount
+  useEffect(() => {
+    const savedMode = Storage.getMultiProfileMode();
+    const savedIds = Storage.getSelectedProfileIds();
+    setMultiProfileMode(savedMode);
+    if (savedIds.length > 0) {
+      setSelectedProfileIds(savedIds);
+    }
+  }, []);
+
+  // Save multi-profile settings when changed
+  useEffect(() => {
+    Storage.saveMultiProfileMode(multiProfileMode);
+  }, [multiProfileMode]);
+
+  useEffect(() => {
+    Storage.saveSelectedProfileIds(selectedProfileIds);
+  }, [selectedProfileIds]);
 
   // Modal state
   const [editingCard, setEditingCard] = useState<CreditCard | null>(null);
@@ -118,6 +157,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [showCardModal, setShowCardModal] = useState(false);
   const [showInstModal, setShowInstModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [transferringCard, setTransferringCard] = useState<CreditCard | null>(null);
+  const [showTransferModal, setShowTransferModal] = useState(false);
 
   // Sorting state
   const [dashboardSort, setDashboardSort] = useState<SortConfig>({ key: 'dueDate', direction: 'asc' });
@@ -131,16 +172,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const monthlyStatements = useMemo(() => statements.filter(s => s.monthStr === monthKey), [statements, monthKey]);
   const activeInstallments = useMemo(() => installments.map(inst => ({ ...inst, status: getInstallmentStatus(inst, viewDate) })).filter(i => i.status.isActive), [installments, viewDate]);
 
+  // Determine visible cards based on mode
+  const visibleCards = useMemo(() => {
+    if (multiProfileMode && selectedProfileIds.length > 0) {
+      return getCardsForProfiles(selectedProfileIds);
+    }
+    return activeCards;
+  }, [multiProfileMode, selectedProfileIds, activeCards, getCardsForProfiles]);
+
   const getCardInstallmentTotal = (cardId: string) => 
     activeInstallments.filter(i => i.cardId === cardId).reduce((acc, i) => acc + i.monthlyAmortization, 0);
 
   const totals = useMemo(() => {
-    const activeCardIds = new Set(activeCards.map(c => c.id));
-    const visibleInstallments = activeInstallments.filter(i => activeCardIds.has(i.cardId));
+    const visibleCardIds = new Set(visibleCards.map(c => c.id));
+    const visibleInstallments = activeInstallments.filter(i => visibleCardIds.has(i.cardId));
     const installmentTotal = visibleInstallments.reduce((acc, i) => acc + i.monthlyAmortization, 0);
     let billTotal = 0;
     let unpaidTotal = 0;
-    activeCards.forEach(card => {
+    visibleCards.forEach(card => {
       const stmt = monthlyStatements.find(s => s.cardId === card.id);
       const cardInstTotal = visibleInstallments.filter(i => i.cardId === card.id).reduce((acc, i) => acc + i.monthlyAmortization, 0);
       const effectiveAmount = stmt ? stmt.amount : cardInstTotal;
@@ -149,7 +198,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (!stmt?.isPaid) unpaidTotal += amountDue;
     });
     return { billTotal, unpaidTotal, installmentTotal };
-  }, [activeCards, monthlyStatements, activeInstallments]);
+  }, [visibleCards, monthlyStatements, activeInstallments]);
 
   // Handler functions
   const handleUpdateStatement = (cardId: string, updates: any) => {
@@ -200,6 +249,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const handleDeleteInstallment = (id: string) => {
     deleteInstallmentBase(id);
+  };
+
+  const handleTransferCard = (cardId: string, targetProfileId: string) => {
+    transferCard(cardId, targetProfileId);
+    setShowTransferModal(false);
+    setTransferringCard(null);
+  };
+
+  const toggleProfileSelection = (profileId: string) => {
+    setSelectedProfileIds(prev => {
+      if (prev.includes(profileId)) {
+        return prev.filter(id => id !== profileId);
+      } else {
+        return [...prev, profileId];
+      }
+    });
+  };
+
+  const openTransferCard = (card: CreditCard) => {
+    setTransferringCard(card);
+    setShowTransferModal(true);
   };
 
   // Import/Export functions
@@ -348,11 +418,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setActiveProfileId,
     addProfile,
     isLoaded,
+    multiProfileMode,
+    setMultiProfileMode,
+    selectedProfileIds,
+    setSelectedProfileIds,
+    toggleProfileSelection,
     cards,
     activeCards,
+    visibleCards,
     addCard,
     updateCard,
     deleteCard: deleteCardBase,
+    transferCard,
     statements,
     monthlyStatements,
     updateStatement,
@@ -389,6 +466,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     handleSaveProfile,
     handleDeleteCard,
     handleDeleteInstallment,
+    handleTransferCard,
     handleExportProfile,
     handleImportProfile,
     handleExportMonthCSV,
@@ -396,6 +474,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     openEditCard,
     openAddInst,
     openEditInst,
+    openTransferCard,
+    transferringCard,
+    showTransferModal,
+    setShowTransferModal,
     fileInputRef,
   };
 

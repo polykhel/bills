@@ -12,7 +12,9 @@ export default function DashboardPage() {
     totals,
     dashboardSort,
     setDashboardSort,
-    activeCards,
+    visibleCards,
+    profiles,
+    multiProfileMode,
     activeInstallments,
     monthlyStatements,
     getCardInstallmentTotal,
@@ -26,14 +28,15 @@ export default function DashboardPage() {
     return null;
   }
 
-  const sortedDashboardData = activeCards.map(card => {
+  const sortedDashboardData = visibleCards.map(card => {
     const stmt = monthlyStatements.find(s => s.cardId === card.id);
     const defaultDate = setDate(viewDate, card.dueDay);
     const displayDate = stmt?.customDueDate ? parseISO(stmt.customDueDate) : defaultDate;
     const cardInstTotal = getCardInstallmentTotal(card.id);
     const displayAmount = stmt ? stmt.amount : cardInstTotal;
     const isPaid = stmt?.isPaid || false;
-    return { card, stmt, displayDate, displayAmount, isPaid, cardInstTotal };
+    const profile = profiles.find(p => p.id === card.profileId);
+    return { card, stmt, displayDate, displayAmount, isPaid, cardInstTotal, profile };
   }).sort((a, b) => {
     const dir = dashboardSort.direction === 'asc' ? 1 : -1;
     switch (dashboardSort.key) {
@@ -86,7 +89,7 @@ export default function DashboardPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {sortedDashboardData.map(({ card, stmt, displayDate, displayAmount, cardInstTotal }) => {
+              {sortedDashboardData.map(({ card, stmt, displayDate, displayAmount, cardInstTotal, profile }) => {
                 const cardInsts = activeInstallments.filter((i: any) => i.cardId === card.id);
                 return (
                   <tr key={card.id} className="hover:bg-slate-50 transition-colors group">
@@ -100,7 +103,14 @@ export default function DashboardPage() {
                         </div>
                         <div>
                           <p className="font-semibold text-slate-800 text-sm">{card.cardName}</p>
-                          <p className="text-xs text-slate-500">{card.bankName}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-xs text-slate-500">{card.bankName}</p>
+                            {multiProfileMode && profile && (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-100 text-purple-700 border border-purple-200">
+                                {profile.name}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </td>
@@ -219,10 +229,10 @@ export default function DashboardPage() {
                   </tr>
                 );
               })}
-              {activeCards.length === 0 && (
+              {visibleCards.length === 0 && (
                 <tr>
                   <td colSpan={6} className="p-8 text-center text-slate-500">
-                    No cards found for this profile.
+                    {multiProfileMode ? 'No cards found. Select profiles to view.' : 'No cards found for this profile.'}
                   </td>
                 </tr>
               )}

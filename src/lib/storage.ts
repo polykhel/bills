@@ -7,6 +7,8 @@ const KEYS = {
   INSTALLMENTS: 'bt_installments',
   ACTIVE_PROFILE_ID: 'bt_active_profile_id',
   ACTIVE_MONTH: 'bt_active_month',
+  MULTI_PROFILE_MODE: 'bt_multi_profile_mode',
+  SELECTED_PROFILE_IDS: 'bt_selected_profile_ids',
 };
 
 export const loadData = <T,>(key: string): T[] => {
@@ -46,6 +48,46 @@ export const saveString = (key: string, value: string) => {
   }
 };
 
+export const loadBoolean = (key: string): boolean => {
+  if (typeof window === 'undefined') return false;
+  try {
+    const item = localStorage.getItem(key);
+    return item ? JSON.parse(item) : false;
+  } catch (e) {
+    console.error('Error loading boolean from key:', key, e);
+    return false;
+  }
+};
+
+export const saveBoolean = (key: string, value: boolean) => {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (e) {
+    console.error('Error saving boolean to key:', key, e);
+  }
+};
+
+export const loadStringArray = (key: string): string[] => {
+  if (typeof window === 'undefined') return [];
+  try {
+    const item = localStorage.getItem(key);
+    return item ? JSON.parse(item) : [];
+  } catch (e) {
+    console.error('Error loading string array from key:', key, e);
+    return [];
+  }
+};
+
+export const saveStringArray = (key: string, value: string[]) => {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (e) {
+    console.error('Error saving string array to key:', key, e);
+  }
+};
+
 export const Storage = {
   getProfiles: () => loadData<Profile>(KEYS.PROFILES),
   saveProfiles: (data: Profile[]) => saveData(KEYS.PROFILES, data),
@@ -64,6 +106,12 @@ export const Storage = {
   saveActiveProfileId: (id: string) => saveString(KEYS.ACTIVE_PROFILE_ID, id),
   getActiveMonthStr: (): string | null => loadString(KEYS.ACTIVE_MONTH),
   saveActiveMonthStr: (monthStr: string) => saveString(KEYS.ACTIVE_MONTH, monthStr),
+
+  // Multi-profile mode
+  getMultiProfileMode: (): boolean => loadBoolean(KEYS.MULTI_PROFILE_MODE),
+  saveMultiProfileMode: (enabled: boolean) => saveBoolean(KEYS.MULTI_PROFILE_MODE, enabled),
+  getSelectedProfileIds: (): string[] => loadStringArray(KEYS.SELECTED_PROFILE_IDS),
+  saveSelectedProfileIds: (ids: string[]) => saveStringArray(KEYS.SELECTED_PROFILE_IDS, ids),
 };
 
 export { KEYS };

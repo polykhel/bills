@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, Trash2, Pencil, Users, Upload, Download, List as ListIcon, CreditCard as RawCardIcon } from 'lucide-react';
+import { Plus, Trash2, Pencil, Users, Upload, Download, List as ListIcon, CreditCard as RawCardIcon, ArrowRightLeft } from 'lucide-react';
 import { cn, formatCurrency, getInstallmentStatus } from '../../lib/utils';
 import SortableHeader from '../_components/ui/SortableHeader';
 import { useApp } from "../providers";
@@ -17,6 +17,7 @@ export default function ManagePage() {
     setManageCardSort,
     openAddCard,
     openEditCard,
+    openTransferCard,
     handleDeleteCard,
     installments,
     viewDate,
@@ -113,10 +114,13 @@ export default function ManagePage() {
           {sortedManageCards.map(card => (
             <div key={card.id} className="relative group bg-slate-50 rounded-xl p-5 border border-slate-200 hover:border-slate-300 transition-all">
               <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition">
-                <button onClick={() => openEditCard(card)} className="text-slate-400 hover:text-blue-500">
+                <button onClick={() => openEditCard(card)} className="text-slate-400 hover:text-blue-500" title="Edit Card">
                   <Pencil className="w-4 h-4" />
                 </button>
-                <button onClick={() => handleDeleteCard(card.id)} className="text-slate-400 hover:text-rose-500">
+                <button onClick={() => openTransferCard(card)} className="text-slate-400 hover:text-purple-500" title="Transfer to Another Profile">
+                  <ArrowRightLeft className="w-4 h-4" />
+                </button>
+                <button onClick={() => handleDeleteCard(card.id)} className="text-slate-400 hover:text-rose-500" title="Delete Card">
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>

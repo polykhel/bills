@@ -7,6 +7,7 @@ import { useApp } from "../providers";
 import CardFormModal from "./modals/CardFormModal";
 import InstallmentFormModal from "./modals/InstallmentFormModal";
 import ProfileFormModal from "./modals/ProfileFormModal";
+import TransferCardModal from "./modals/TransferCardModal";
 import { getInstallmentStatus } from "../../lib/utils";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -17,24 +18,42 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     profiles,
     activeProfileId,
     setActiveProfileId,
+    multiProfileMode,
+    setMultiProfileMode,
+    selectedProfileIds,
+    toggleProfileSelection,
     showCardModal,
     setShowCardModal,
     showInstModal,
     setShowInstModal,
     showProfileModal,
     setShowProfileModal,
+    showTransferModal,
+    setShowTransferModal,
     editingCard,
     setEditingCard,
     editingInst,
     setEditingInst,
+    transferringCard,
     activeCards,
     handleSaveCard,
     handleSaveInstallment,
     handleSaveProfile,
+    handleTransferCard,
     handleImportProfile,
     fileInputRef,
     isLoaded,
   } = useApp();
+
+  const handleToggleMultiProfileMode = () => {
+    if (multiProfileMode) {
+      // Turning off: clear selections
+      setMultiProfileMode(false);
+    } else {
+      // Turning on: start with current profile selected
+      setMultiProfileMode(true);
+    }
+  };
 
   // Don't show layout on home page (it's just redirecting)
   if (pathname === "/") {
@@ -65,6 +84,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         activeProfileId={activeProfileId}
         onProfileChange={setActiveProfileId}
         onCreateProfile={() => setShowProfileModal(true)}
+        multiProfileMode={multiProfileMode}
+        selectedProfileIds={selectedProfileIds}
+        onToggleMultiProfileMode={handleToggleMultiProfileMode}
+        onToggleProfileSelection={toggleProfileSelection}
       />
 
       <div className="max-w-5xl mx-auto px-4 mt-6 mb-6">
@@ -119,6 +142,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         isOpen={showProfileModal}
         onClose={() => setShowProfileModal(false)}
         onSave={handleSaveProfile}
+      />
+
+      <TransferCardModal
+        isOpen={showTransferModal}
+        onClose={() => setShowTransferModal(false)}
+        card={transferringCard}
+        profiles={profiles}
+        currentProfileId={activeProfileId}
+        onTransfer={handleTransferCard}
       />
     </div>
   );
