@@ -91,31 +91,34 @@ To enable Google Drive auto-sync, you need to create a Google Cloud project and 
    - API restrictions: Restrict key → Select "Google Drive API"
    - Click "Save"
 
-### Step 5: Configure Your App
+**Note on OAuth Scopes:**
+- The app will request `drive.file` scope (access to files created by the app) for visible folder mode
+- For hidden folder mode, it uses `drive.appdata` scope (access to hidden app data folder)
+- Users can switch between modes, but may need to sign in again when changing
 
-Add these environment variables to your `.env.local` file:
+### Step 5: Install Google API Package
 
-```env
-NEXT_PUBLIC_GOOGLE_DRIVE_CLIENT_ID=your_client_id_here
-NEXT_PUBLIC_GOOGLE_DRIVE_API_KEY=your_api_key_here
+Install the required npm package:
+
+```bash
+npm install gapi-script
 ```
 
-### Step 6: Load Google API Script
+### Step 6: Load Google Identity Services
 
-Add the Google API script to your app. Update `src/app/layout.tsx`:
+Add the Google Identity Services script to your `src/app/layout.tsx`:
 
 ```tsx
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+import Script from 'next/script';
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <head>
-        <script src="https://apis.google.com/js/api.js"></script>
-      </head>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body>
+        <Script
+          src="https://accounts.google.com/gsi/client"
+          strategy="beforeInteractive"
+        />
         <AppProvider>
           <AppLayout>{children}</AppLayout>
         </AppProvider>
@@ -125,7 +128,16 @@ export default function RootLayout({
 }
 ```
 
-### Step 7: Use the Sync Component
+### Step 7: Configure Your App
+
+Add these environment variables to your `.env.local` file:
+
+```env
+NEXT_PUBLIC_GOOGLE_DRIVE_CLIENT_ID=your_client_id_here
+NEXT_PUBLIC_GOOGLE_DRIVE_API_KEY=your_api_key_here
+```
+
+### Step 8: Use the Sync Component
 
 You can now use the `<SyncSettings>` component anywhere in your app:
 
@@ -162,10 +174,25 @@ Exported data includes:
 - Active profile and month selections
 
 ### Google Drive Storage
-- Data is stored in Google Drive's app data folder
+
+You can choose between two storage locations:
+
+**1. Hidden App Folder (Default - Recommended)**
+- File stored in Google Drive's hidden app data folder
 - Only your app can access this folder
-- Not visible in the user's regular Drive files
+- Not visible in your regular Drive files
+- More secure (hidden from other apps)
 - Automatically synced across devices
+- Cannot be accidentally deleted or modified
+
+**2. Visible Folder**
+- File stored in Drive root as `bills-sync.json`
+- Visible in your regular Drive interface
+- Easy to verify backups exist
+- Can manually download/share if needed
+- Still encrypted for security
+
+**Note:** Changing storage location requires signing out and signing in again with different permissions.
 
 ### Sync Logic
 - Compares timestamps between local and cloud data

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Download, Upload, Cloud, FileDown, Lock, AlertCircle } from 'lucide-react';
 import { SyncService } from '@/lib/sync';
 import { getPasswordStrength, getDataSize, formatBytes } from '@/lib/sync-utils';
+import { SyncSettings } from '../_components/sync-settings';
 
 export default function SyncPage() {
   const [password, setPassword] = useState('');
@@ -183,7 +184,7 @@ export default function SyncPage() {
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex items-center gap-2 mb-4">
             <Cloud className="w-5 h-5 text-blue-600" />
-            <h2 className="text-xl font-semibold text-gray-900">Auto-Sync (Coming Soon)</h2>
+            <h2 className="text-xl font-semibold text-gray-900">Auto-Sync</h2>
           </div>
 
           <p className="text-sm text-gray-600 mb-4">
@@ -191,12 +192,11 @@ export default function SyncPage() {
             before uploading to ensure privacy.
           </p>
 
-          <div className="bg-gray-50 rounded-md p-4 border border-gray-200">
-            <p className="text-sm text-gray-500">
-              🔒 Google Drive auto-sync feature is currently in development.
-              For now, use manual sync and store your backup file in Google Drive or any cloud storage.
-            </p>
-          </div>
+          
+          <SyncSettings
+            driveClientId={process.env.NEXT_PUBLIC_GOOGLE_DRIVE_CLIENT_ID}
+            driveApiKey={process.env.NEXT_PUBLIC_GOOGLE_DRIVE_API_KEY}
+          />
         </div>
 
         {/* Data Info */}

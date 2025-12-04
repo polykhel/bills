@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Cloud, CloudOff, Upload, Download, Settings, RefreshCw } from 'lucide-react';
 import { useSync } from '@/lib/use-sync';
+import ConfirmDialog from './ui/ConfirmDialog';
 
 interface SyncSettingsProps {
   driveClientId?: string;
@@ -12,10 +13,13 @@ interface SyncSettingsProps {
 export function SyncSettings({ driveClientId, driveApiKey }: SyncSettingsProps) {
   const [password, setPassword] = useState('');
   const [autoSyncEnabled, setAutoSyncEnabled] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
+  const [showSettings, setShowSettings] = useState(true);
+  const [useHiddenFolder, setUseHiddenFolder] = useState(true);
+  const [showStorageConfirm, setShowStorageConfirm] = useState(false);
+  const [pendingStorageValue, setPendingStorageValue] = useState(false);
 
   const driveConfig = driveClientId && driveApiKey
-    ? { clientId: driveClientId, apiKey: driveApiKey }
+    ? { clientId: driveClientId, apiKey: driveApiKey, useAppDataFolder: useHiddenFolder }
     : undefined;
 
   const {
@@ -43,6 +47,10 @@ export function SyncSettings({ driveClientId, driveApiKey }: SyncSettingsProps) 
 
       const autoSync = localStorage.getItem('bt_auto_sync') === 'true';
       setAutoSyncEnabled(autoSync);
+
+      const savedHiddenFolder = localStorage.getItem('bt_hidden_folder');
+      const hiddenFolder = savedHiddenFolder !== null ? savedHiddenFolder === 'true' : true;
+      setUseHiddenFolder(hiddenFolder);
     };
 
     loadSavedSettings();
@@ -67,6 +75,14 @@ export function SyncSettings({ driveClientId, driveApiKey }: SyncSettingsProps) 
     
     localStorage.setItem('bt_sync_password', password);
     await uploadToCloud(password);
+    
+    // Show success message after upload
+    if (!error) {
+      const location = useHiddenFolder 
+        ? 'in your Google Drive hidden app folder (not visible in regular Drive)'
+        : 'in your Google Drive root folder as "bills-sync.json"';
+      alert(`✓ Data uploaded successfully to Google Drive!\n\nNote: The file is stored ${location}`);
+    }
   };
 
   const handleDownload = async () => {
@@ -89,6 +105,34 @@ export function SyncSettings({ driveClientId, driveApiKey }: SyncSettingsProps) 
     if (newValue && password) {
       localStorage.setItem('bt_sync_password', password);
     }
+  };
+
+  const toggleStorageLocation = () => {
+    const newValue = !useHiddenFolder;
+    
+    if (isSignedIn) {
+      // Show confirmation dialog when signed in
+      setPendingStorageValue(newValue);
+      setShowStorageConfirm(true);
+    } else {
+      // Directly change when not signed in
+      setUseHiddenFolder(newValue);
+      localStorage.setItem('bt_hidden_folder', String(newValue));
+    }
+  };
+
+  const handleStorageConfirm = async () => {
+    // Sign out first
+    await signOut();
+    
+    // Apply the change
+    setUseHiddenFolder(pendingStorageValue);
+    localStorage.setItem('bt_hidden_folder', String(pendingStorageValue));
+    
+    // Disable auto-sync since we're signing out
+    setAutoSyncEnabled(false);
+    localStorage.removeItem('bt_sync_password');
+    localStorage.removeItem('bt_auto_sync');
   };
 
   if (!driveConfig) {
@@ -159,17 +203,38 @@ export function SyncSettings({ driveClientId, driveApiKey }: SyncSettingsProps) 
                 />
               </div>
 
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="autoSync"
-                  checked={autoSyncEnabled}
-                  onChange={toggleAutoSync}
-                  className="w-4 h-4 text-blue-600 rounded"
-                />
-                <label htmlFor="autoSync" className="text-sm text-gray-700">
-                  Enable auto-sync (every 5 minutes)
-                </label>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="autoSync"
+                    checked={autoSyncEnabled}
+                    onChange={toggleAutoSync}
+                    className="w-4 h-4 text-blue-600 rounded"
+                  />
+                  <label htmlFor="autoSync" className="text-sm text-gray-700">
+                    Enable auto-sync (every 5 minutes)
+                  </label>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="hiddenFolder"
+                    checked={useHiddenFolder}
+                    onChange={toggleStorageLocation}
+                    className="w-4 h-4 text-blue-600 rounded"
+                  />
+                  <label htmlFor="hiddenFolder" className="text-sm text-gray-700">
+                    Use hidden folder (recommended)
+                  </label>
+                </div>
+                <p className="text-xs text-gray-500 ml-6">
+                  {useHiddenFolder 
+                    ? "Files stored in hidden app folder (not visible in Drive)" 
+                    : "Files stored in Drive root folder (visible as bills-sync.json)"}
+                  {isSignedIn && " • Changing requires re-authentication"}
+                </p>
               </div>
             </div>
           )}
@@ -229,6 +294,18 @@ export function SyncSettings({ driveClientId, driveApiKey }: SyncSettingsProps) 
           </button>
         </div>
       )}
+
+      {/* Storage Location Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showStorageConfirm}
+        onClose={() => setShowStorageConfirm(false)}
+        onConfirm={handleStorageConfirm}
+        title="Change Storage Location"
+        message={`Changing to ${pendingStorageValue ? 'hidden folder' : 'visible folder'} will sign you out and require signing in again with different permissions. Your current sync session will end.`}
+        confirmText="Sign Out & Change"
+        cancelText="Cancel"
+        variant="warning"
+      />
     </div>
   );
 }

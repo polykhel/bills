@@ -1,14 +1,32 @@
 /**
  * Google Drive sync service for automatic backup and sync
- * Uses Google Drive API with OAuth2 authentication
+ * Uses Google Drive API with OAuth2 authentication (Google Identity Services)
  */
 
+import { gapi } from 'gapi-script';
 import { SyncService } from './sync';
+
+// Type declarations for Google Identity Services
+declare global {
+  interface Window {
+    google?: {
+      accounts: {
+        oauth2: {
+          initTokenClient: (config: any) => any;
+          revoke: (token: string, callback: () => void) => void;
+        };
+      };
+    };
+  }
+}
+
+const google = typeof window !== 'undefined' ? window.google : undefined;
 
 export interface DriveConfig {
   clientId: string;
   apiKey: string;
   appFolderId?: string;
+  useAppDataFolder?: boolean; // true = hidden folder, false = visible folder
 }
 
 export interface DriveFile {
@@ -17,40 +35,68 @@ export interface DriveFile {
   modifiedTime: string;
 }
 
+interface TokenResponse {
+  access_token: string;
+  expires_in: number;
+  scope: string;
+  token_type: string;
+  error?: string;
+}
+
 export class GoogleDriveSync {
   private static readonly DISCOVERY_DOCS = [
     'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest',
   ];
-  private static readonly SCOPES = 'https://www.googleapis.com/auth/drive.appdata';
   private static readonly BACKUP_FILENAME = 'bills-sync.json';
 
   private config: DriveConfig;
   private isInitialized = false;
   private accessToken: string | null = null;
+  private tokenClient: any = null;
 
   constructor(config: DriveConfig) {
-    this.config = config;
+    this.config = {
+      ...config,
+      useAppDataFolder: config.useAppDataFolder ?? true, // Default to hidden folder
+    };
   }
 
   /**
-   * Initialize Google Drive API
+   * Get the appropriate scope based on config
+   */
+  private getScopes(): string {
+    // Use appropriate scope based on storage mode
+    return this.config.useAppDataFolder
+      ? 'https://www.googleapis.com/auth/drive.appdata'
+      : 'https://www.googleapis.com/auth/drive.file';
+  }
+
+  /**
+   * Initialize Google Drive API with Google Identity Services
    */
   async initialize(): Promise<void> {
     return new Promise((resolve, reject) => {
-      // Load Google API client
-      if (typeof window === 'undefined' || !window.gapi) {
-        reject(new Error('Google API not loaded'));
+      if (typeof window === 'undefined') {
+        reject(new Error('Not in browser environment'));
         return;
       }
 
-      window.gapi.load('client:auth2', async () => {
+      // Load gapi client
+      gapi.load('client', async () => {
         try {
-          await window.gapi.client.init({
+          await gapi.client.init({
             apiKey: this.config.apiKey,
-            clientId: this.config.clientId,
             discoveryDocs: GoogleDriveSync.DISCOVERY_DOCS,
-            scope: GoogleDriveSync.SCOPES,
           });
+
+          // Initialize Google Identity Services
+          if (typeof google !== 'undefined' && google.accounts) {
+            this.tokenClient = google.accounts.oauth2.initTokenClient({
+              client_id: this.config.clientId,
+              scope: this.getScopes(),
+              callback: '', // Will be set dynamically
+            });
+          }
 
           this.isInitialized = true;
           resolve();
@@ -62,24 +108,61 @@ export class GoogleDriveSync {
   }
 
   /**
-   * Sign in to Google
+   * Sign in to Google using Google Identity Services
    */
   async signIn(): Promise<void> {
     if (!this.isInitialized) {
       await this.initialize();
     }
 
-    const auth = window.gapi.auth2.getAuthInstance();
-    await auth.signIn();
-    this.accessToken = auth.currentUser.get().getAuthResponse().access_token;
+    // Reinitialize token client with current scope
+    if (typeof google !== 'undefined' && google.accounts) {
+      this.tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: this.config.clientId,
+        scope: this.getScopes(),
+        callback: '', // Will be set dynamically
+      });
+    }
+
+    return new Promise((resolve, reject) => {
+      try {
+        // Request an access token
+        this.tokenClient.callback = (response: TokenResponse) => {
+          if (response.error !== undefined) {
+            reject(new Error(response.error));
+            return;
+          }
+          this.accessToken = response.access_token;
+          gapi.client.setToken({ access_token: response.access_token });
+          resolve();
+        };
+
+        // Check if already have a valid token
+        if (gapi.client.getToken() !== null) {
+          resolve();
+        } else {
+          // Prompt the user to select an account and consent to share data
+          this.tokenClient.requestAccessToken({ prompt: 'consent' });
+        }
+      } catch (err) {
+        reject(err);
+      }
+    });
   }
 
   /**
    * Sign out from Google
    */
   async signOut(): Promise<void> {
-    const auth = window.gapi.auth2.getAuthInstance();
-    await auth.signOut();
+    const token = gapi.client.getToken();
+    if (token !== null) {
+      if (google?.accounts?.oauth2) {
+        google.accounts.oauth2.revoke(token.access_token, () => {
+          console.log('Token revoked');
+        });
+      }
+      gapi.client.setToken(null);
+    }
     this.accessToken = null;
   }
 
@@ -88,8 +171,8 @@ export class GoogleDriveSync {
    */
   isSignedIn(): boolean {
     if (!this.isInitialized) return false;
-    const auth = window.gapi.auth2.getAuthInstance();
-    return auth.isSignedIn.get();
+    const token = gapi.client.getToken();
+    return token !== null && this.accessToken !== null;
   }
 
   /**
@@ -132,21 +215,26 @@ export class GoogleDriveSync {
   }
 
   /**
-   * Find the backup file in app data folder
+   * Find the backup file in Drive
    */
   private async findBackupFile(): Promise<DriveFile | null> {
-    const response = await window.gapi.client.drive.files.list({
-      spaces: 'appDataFolder',
-      fields: 'files(id, name, modifiedTime)',
-      q: `name='${GoogleDriveSync.BACKUP_FILENAME}' and trashed=false`,
-    });
+    try {
+      const response = await gapi.client.drive.files.list({
+        spaces: this.config.useAppDataFolder ? 'appDataFolder' : 'drive',
+        fields: 'files(id, name, modifiedTime)',
+        q: `name='${GoogleDriveSync.BACKUP_FILENAME}' and trashed=false`,
+      });
 
-    const files = response.result.files;
-    return files && files.length > 0 ? files[0] : null;
+      const files = response.result.files;
+      return files && files.length > 0 ? files[0] : null;
+    } catch (error) {
+      console.error('Error finding backup file:', error);
+      throw error;
+    }
   }
 
   /**
-   * Create a new file in app data folder
+   * Create a new file in Drive (visible or app data folder)
    */
   private async createFile(content: string): Promise<string> {
     const boundary = '-------314159265358979323846';
@@ -156,7 +244,7 @@ export class GoogleDriveSync {
     const metadata = {
       name: GoogleDriveSync.BACKUP_FILENAME,
       mimeType: 'application/json',
-      parents: ['appDataFolder'],
+      parents: this.config.useAppDataFolder ? ['appDataFolder'] : undefined,
     };
 
     const multipartRequestBody =
@@ -180,7 +268,14 @@ export class GoogleDriveSync {
       }
     );
 
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Drive upload error:', errorText);
+      throw new Error(`Failed to upload file: ${response.status} ${response.statusText}`);
+    }
+
     const data = await response.json();
+    console.log('File created successfully:', data);
     return data.id;
   }
 
@@ -200,7 +295,14 @@ export class GoogleDriveSync {
       }
     );
 
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Drive update error:', errorText);
+      throw new Error(`Failed to update file: ${response.status} ${response.statusText}`);
+    }
+
     const data = await response.json();
+    console.log('File updated successfully:', data);
     return data.id;
   }
 
@@ -264,11 +366,14 @@ export class GoogleDriveSync {
 
     return 'synced';
   }
-}
 
-// Type augmentation for gapi
-declare global {
-  interface Window {
-    gapi: any;
+  /**
+   * Get backup file info (for verification)
+   */
+  async getBackupInfo(): Promise<DriveFile | null> {
+    if (!this.isSignedIn()) {
+      throw new Error('Not signed in to Google Drive');
+    }
+    return this.findBackupFile();
   }
 }
