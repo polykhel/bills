@@ -1,10 +1,11 @@
 "use client";
 
 import { format, setDate, parseISO, isValid } from 'date-fns';
-import { FileSpreadsheet, CheckCircle2, Circle } from 'lucide-react';
+import { FileSpreadsheet, CheckCircle2, Circle, Copy } from 'lucide-react';
 import { cn, formatCurrency } from '../../lib/utils';
 import SortableHeader from '../_components/ui/SortableHeader';
 import { useApp } from "../providers";
+import { useState } from 'react';
 
 export default function DashboardPage() {
   const {
@@ -28,6 +29,45 @@ export default function DashboardPage() {
     balanceStatus,
     isLoaded,
   } = useApp();
+
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [selectedCards, setSelectedCards] = useState<Set<string>>(new Set());
+  const [batchCopied, setBatchCopied] = useState(false);
+
+  const copyCardInfo = async (cardName: string, bankName: string, amountDue: number) => {
+    const text = `${bankName} ${cardName}\t${formatCurrency(amountDue)}`;
+    await navigator.clipboard.writeText(text);
+    return text;
+  };
+
+  const toggleCardSelection = (cardId: string) => {
+    const newSelected = new Set(selectedCards);
+    if (newSelected.has(cardId)) {
+      newSelected.delete(cardId);
+    } else {
+      newSelected.add(cardId);
+    }
+    setSelectedCards(newSelected);
+  };
+
+  const toggleAllCards = () => {
+    if (selectedCards.size === visibleCards.length) {
+      setSelectedCards(new Set());
+    } else {
+      setSelectedCards(new Set(visibleCards.map(c => c.id)));
+    }
+  };
+
+  const copySelectedCards = async () => {
+    const sortedData = sortedDashboardData.filter(d => selectedCards.has(d.card.id));
+    const lines = sortedData.map(({ card, stmt, displayAmount }) => {
+      const amountDue = stmt?.adjustedAmount ?? displayAmount;
+      return `${card.bankName} ${card.cardName}\t ${formatCurrency(amountDue)}`;
+    });
+    await navigator.clipboard.writeText(lines.join('\n'));
+    setBatchCopied(true);
+    setTimeout(() => setBatchCopied(false), 2000);
+  };
 
   if (!isLoaded) {
     return null;
@@ -133,30 +173,70 @@ export default function DashboardPage() {
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="flex justify-between items-center px-6 py-4 border-b border-slate-100 bg-slate-50/50">
           <h3 className="font-bold text-slate-700">Bills for {format(viewDate, 'MMMM yyyy')}</h3>
-          <button 
-            onClick={handleExportMonthCSV}
-            className="flex items-center gap-2 text-xs font-medium text-slate-600 hover:text-slate-900 bg-white border border-slate-200 hover:border-slate-300 px-3 py-1.5 rounded-lg transition"
-          >
-            <FileSpreadsheet className="w-4 h-4 text-green-600" /> Export CSV
-          </button>
+          <div className="flex items-center gap-2">
+            {selectedCards.size > 0 && (
+              <button 
+                onClick={copySelectedCards}
+                className={cn(
+                  "flex items-center gap-2 text-xs font-medium px-3 py-1.5 rounded-lg transition",
+                  batchCopied
+                    ? "bg-green-100 text-green-700 border border-green-200"
+                    : "bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100"
+                )}
+              >
+                {batchCopied ? (
+                  <><CheckCircle2 className="w-4 h-4" /> Copied {selectedCards.size}!</>
+                ) : (
+                  <><Copy className="w-4 h-4" /> Copy {selectedCards.size} Selected</>
+                )}
+              </button>
+            )}
+            <button 
+              onClick={handleExportMonthCSV}
+              className="flex items-center gap-2 text-xs font-medium text-slate-600 hover:text-slate-900 bg-white border border-slate-200 hover:border-slate-300 px-3 py-1.5 rounded-lg transition"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-green-600" /> Export CSV
+            </button>
+          </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead className="bg-slate-50 border-b border-slate-200 text-xs uppercase text-slate-500 font-semibold">
               <tr>
+                <th className="p-4 w-12">
+                  <input 
+                    type="checkbox"
+                    checked={selectedCards.size === sortedDashboardData.length && sortedDashboardData.length > 0}
+                    onChange={toggleAllCards}
+                    className="w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500 cursor-pointer"
+                  />
+                </th>
                 <SortableHeader label="Card" sortKey="bankName" currentSort={dashboardSort} onSort={(k) => setDashboardSort({ key: k, direction: dashboardSort.key === k && dashboardSort.direction === 'asc' ? 'desc' : 'asc' })} />
                 <SortableHeader label="Due Date" sortKey="dueDate" currentSort={dashboardSort} onSort={(k) => setDashboardSort({ key: k, direction: dashboardSort.key === k && dashboardSort.direction === 'asc' ? 'desc' : 'asc' })} />
                 <SortableHeader label="Statement Balance" sortKey="amount" currentSort={dashboardSort} onSort={(k) => setDashboardSort({ key: k, direction: dashboardSort.key === k && dashboardSort.direction === 'asc' ? 'desc' : 'asc' })} />
                 <th className="p-4">Amount Due</th>
                 <th className="p-4 w-1/4">Active Installments</th>
                 <SortableHeader label="Status" sortKey="status" currentSort={dashboardSort} onSort={(k) => setDashboardSort({ key: k, direction: dashboardSort.key === k && dashboardSort.direction === 'asc' ? 'desc' : 'asc' })} />
+                <th className="p-4">Copy</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {sortedDashboardData.map(({ card, stmt, displayDate, displayAmount, cardInstTotal, profile }) => {
                 const cardInsts = activeInstallments.filter((i: any) => i.cardId === card.id);
+                const amountDue = stmt?.adjustedAmount ?? displayAmount;
                 return (
-                  <tr key={card.id} className="hover:bg-slate-50 transition-colors group">
+                  <tr key={card.id} className={cn(
+                    "hover:bg-slate-50 transition-colors group",
+                    selectedCards.has(card.id) && "bg-blue-50/50"
+                  )}>
+                    <td className="p-4">
+                      <input 
+                        type="checkbox"
+                        checked={selectedCards.has(card.id)}
+                        onChange={() => toggleCardSelection(card.id)}
+                        className="w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500 cursor-pointer"
+                      />
+                    </td>
                     <td className="p-4">
                       <div className="flex items-center gap-3">
                         <div 
@@ -290,12 +370,34 @@ export default function DashboardPage() {
                         {stmt?.isPaid ? <CheckCircle2 className="w-5 h-5" /> : <Circle className="w-5 h-5" />}
                       </button>
                     </td>
+                    <td className="p-4 text-center">
+                      <button 
+                        onClick={async () => {
+                          await copyCardInfo(card.cardName, card.bankName, amountDue);
+                          setCopiedId(card.id);
+                          setTimeout(() => setCopiedId(null), 2000);
+                        }}
+                        title="Copy card info"
+                        className={cn(
+                          'p-2 rounded-full transition-all duration-200',
+                          copiedId === card.id
+                            ? 'text-green-600 bg-green-100'
+                            : 'text-slate-400 bg-slate-100 hover:bg-slate-200 hover:text-slate-600'
+                        )}
+                      >
+                        {copiedId === card.id ? (
+                          <CheckCircle2 className="w-4 h-4" />
+                        ) : (
+                          <Copy className="w-4 h-4" />
+                        )}
+                      </button>
+                    </td>
                   </tr>
                 );
               })}
               {visibleCards.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="p-8 text-center text-slate-500">
+                  <td colSpan={8} className="p-8 text-center text-slate-500">
                     {multiProfileMode ? 'No cards found. Select profiles to view.' : 'No cards found for this profile.'}
                   </td>
                 </tr>
