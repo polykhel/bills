@@ -58,6 +58,7 @@ export default function ManagePage() {
     switch(manageInstSort.key) {
       case 'name': return a.name.localeCompare(b.name) * dir;
       case 'card': return cardA.localeCompare(cardB) * dir;
+      case 'startDate': return a.startDate.localeCompare(b.startDate) * dir;
       case 'monthly': return (a.monthlyAmortization - b.monthlyAmortization) * dir;
       case 'progress': 
         const statA = getInstallmentStatus(a, viewDate).currentTerm;
@@ -168,6 +169,7 @@ export default function ManagePage() {
               <tr>
                 <SortableHeader label="Item" sortKey="name" currentSort={manageInstSort} onSort={(k) => setManageInstSort({ key: k, direction: manageInstSort.key === k && manageInstSort.direction === 'asc' ? 'desc' : 'asc' })} />
                 <SortableHeader label="Card" sortKey="card" currentSort={manageInstSort} onSort={(k) => setManageInstSort({ key: k, direction: manageInstSort.key === k && manageInstSort.direction === 'asc' ? 'desc' : 'asc' })} />
+                <SortableHeader label="Start Date" sortKey="startDate" currentSort={manageInstSort} onSort={(k) => setManageInstSort({ key: k, direction: manageInstSort.key === k && manageInstSort.direction === 'asc' ? 'desc' : 'asc' })} />
                 <SortableHeader label="Progress" sortKey="progress" currentSort={manageInstSort} onSort={(k) => setManageInstSort({ key: k, direction: manageInstSort.key === k && manageInstSort.direction === 'asc' ? 'desc' : 'asc' })} />
                 <SortableHeader label="Monthly" sortKey="monthly" currentSort={manageInstSort} onSort={(k) => setManageInstSort({ key: k, direction: manageInstSort.key === k && manageInstSort.direction === 'asc' ? 'desc' : 'asc' })} />
                 <th className="p-3 text-right rounded-r-lg">Action</th>
@@ -181,6 +183,7 @@ export default function ManagePage() {
                   <tr key={inst.id} className="hover:bg-slate-50 group">
                     <td className="p-3 font-medium text-slate-800">{inst.name}</td>
                     <td className="p-3 text-slate-600">{card ? `${card.bankName} - ${card.cardName}` : 'Unknown'}</td>
+                    <td className="p-3 text-slate-600">{new Date(inst.startDate).toLocaleDateString()}</td>
                     <td className="p-3">
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-mono w-12 text-right">{status.currentTerm > inst.terms ? 'Done' : status.currentTerm < 1 ? 'Pending' : `${status.currentTerm}/${inst.terms}`}</span>
@@ -209,7 +212,7 @@ export default function ManagePage() {
                 );
               })}
               {sortedManageInstallments.length === 0 && (
-                <tr><td colSpan={5} className="p-4 text-center text-slate-400">No installments found.</td></tr>
+                <tr><td colSpan={6} className="p-4 text-center text-slate-400">No installments found.</td></tr>
               )}
             </tbody>
           </table>
