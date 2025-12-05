@@ -5,7 +5,7 @@ import { FileSpreadsheet, CheckCircle2, Circle, Copy } from 'lucide-react';
 import { cn, formatCurrency } from '../../lib/utils';
 import SortableHeader from '../_components/ui/SortableHeader';
 import { useApp } from "../providers";
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 export default function DashboardPage() {
   const {
@@ -33,6 +33,52 @@ export default function DashboardPage() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [selectedCards, setSelectedCards] = useState<Set<string>>(new Set());
   const [batchCopied, setBatchCopied] = useState(false);
+  const [bulkSelectMode, setBulkSelectMode] = useState(false);
+  
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>({
+    checkbox: 48,
+    card: 300,
+    dueDate: 150,
+    statementBalance: 180,
+    amountDue: 180,
+    installments: 200,
+    status: 100,
+    copy: 80
+  });
+  const [resizing, setResizing] = useState<{ column: string; startX: number; startWidth: number } | null>(null);
+  const tableRef = useRef<HTMLTableElement>(null);
+
+  useEffect(() => {
+    if (!resizing) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!resizing) return;
+      const diff = e.clientX - resizing.startX;
+      const newWidth = Math.max(50, resizing.startWidth + diff);
+      setColumnWidths(prev => ({ ...prev, [resizing.column]: newWidth }));
+    };
+
+    const handleMouseUp = () => {
+      setResizing(null);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [resizing]);
+
+  const startResize = (column: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    setResizing({
+      column,
+      startX: e.clientX,
+      startWidth: columnWidths[column]
+    });
+  };
 
   const copyCardInfo = async (cardName: string, bankName: string, amountDue: number) => {
     const text = `${bankName} ${cardName}\t${formatCurrency(amountDue)}`;
@@ -174,7 +220,7 @@ export default function DashboardPage() {
         <div className="flex justify-between items-center px-6 py-4 border-b border-slate-100 bg-slate-50/50">
           <h3 className="font-bold text-slate-700">Bills for {format(viewDate, 'MMMM yyyy')}</h3>
           <div className="flex items-center gap-2">
-            {selectedCards.size > 0 && (
+            {bulkSelectMode && selectedCards.size > 0 && (
               <button 
                 onClick={copySelectedCards}
                 className={cn(
@@ -191,6 +237,25 @@ export default function DashboardPage() {
                 )}
               </button>
             )}
+            {bulkSelectMode && (
+              <button 
+                onClick={() => {
+                  setBulkSelectMode(false);
+                  setSelectedCards(new Set());
+                }}
+                className="flex items-center gap-2 text-xs font-medium text-slate-600 hover:text-slate-900 bg-white border border-slate-200 hover:border-slate-300 px-3 py-1.5 rounded-lg transition"
+              >
+                Cancel Select
+              </button>
+            )}
+            {!bulkSelectMode && (
+              <button 
+                onClick={() => setBulkSelectMode(true)}
+                className="flex items-center gap-2 text-xs font-medium text-blue-600 hover:text-blue-800 bg-blue-50 border border-blue-200 hover:border-blue-300 px-3 py-1.5 rounded-lg transition"
+              >
+                <Copy className="w-4 h-4" /> Bulk Copy
+              </button>
+            )}
             <button 
               onClick={handleExportMonthCSV}
               className="flex items-center gap-2 text-xs font-medium text-slate-600 hover:text-slate-900 bg-white border border-slate-200 hover:border-slate-300 px-3 py-1.5 rounded-lg transition"
@@ -200,24 +265,88 @@ export default function DashboardPage() {
           </div>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table ref={tableRef} className={cn("w-full text-left border-collapse", resizing && "select-none")} style={{ tableLayout: 'fixed' }}>
             <thead className="bg-slate-50 border-b border-slate-200 text-xs uppercase text-slate-500 font-semibold">
               <tr>
-                <th className="p-4 w-12">
-                  <input 
-                    type="checkbox"
-                    checked={selectedCards.size === sortedDashboardData.length && sortedDashboardData.length > 0}
-                    onChange={toggleAllCards}
-                    className="w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500 cursor-pointer"
-                  />
+                {bulkSelectMode && (
+                  <th className="p-4 relative" style={{ width: `${columnWidths.checkbox}px` }}>
+                    <input 
+                      type="checkbox"
+                      checked={selectedCards.size === sortedDashboardData.length && sortedDashboardData.length > 0}
+                      onChange={toggleAllCards}
+                      className="w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500 cursor-pointer"
+                    />
+                    <div
+                      className="absolute right-0 top-0 w-1 h-full cursor-col-resize hover:bg-blue-400 group"
+                      onMouseDown={(e) => startResize('checkbox', e)}
+                    >
+                      <div className="absolute inset-y-0 -left-1 -right-1" />
+                    </div>
+                  </th>
+                )}
+                <th className="relative" style={{ width: `${columnWidths.card}px` }}>
+                  <SortableHeader label="Card" sortKey="bankName" currentSort={dashboardSort} onSort={(k) => setDashboardSort({ key: k, direction: dashboardSort.key === k && dashboardSort.direction === 'asc' ? 'desc' : 'asc' })} />
+                  <div
+                    className="absolute right-0 top-0 w-1 h-full cursor-col-resize hover:bg-blue-400 group"
+                    onMouseDown={(e) => startResize('card', e)}
+                  >
+                    <div className="absolute inset-y-0 -left-1 -right-1" />
+                  </div>
                 </th>
-                <SortableHeader label="Card" sortKey="bankName" currentSort={dashboardSort} onSort={(k) => setDashboardSort({ key: k, direction: dashboardSort.key === k && dashboardSort.direction === 'asc' ? 'desc' : 'asc' })} />
-                <SortableHeader label="Due Date" sortKey="dueDate" currentSort={dashboardSort} onSort={(k) => setDashboardSort({ key: k, direction: dashboardSort.key === k && dashboardSort.direction === 'asc' ? 'desc' : 'asc' })} />
-                <SortableHeader label="Statement Balance" sortKey="amount" currentSort={dashboardSort} onSort={(k) => setDashboardSort({ key: k, direction: dashboardSort.key === k && dashboardSort.direction === 'asc' ? 'desc' : 'asc' })} />
-                <th className="p-4">Amount Due</th>
-                <th className="p-4 w-1/4">Active Installments</th>
-                <SortableHeader label="Status" sortKey="status" currentSort={dashboardSort} onSort={(k) => setDashboardSort({ key: k, direction: dashboardSort.key === k && dashboardSort.direction === 'asc' ? 'desc' : 'asc' })} />
-                <th className="p-4">Copy</th>
+                <th className="relative" style={{ width: `${columnWidths.dueDate}px` }}>
+                  <SortableHeader label="Due Date" sortKey="dueDate" currentSort={dashboardSort} onSort={(k) => setDashboardSort({ key: k, direction: dashboardSort.key === k && dashboardSort.direction === 'asc' ? 'desc' : 'asc' })} />
+                  <div
+                    className="absolute right-0 top-0 w-1 h-full cursor-col-resize hover:bg-blue-400 group"
+                    onMouseDown={(e) => startResize('dueDate', e)}
+                  >
+                    <div className="absolute inset-y-0 -left-1 -right-1" />
+                  </div>
+                </th>
+                <th className="relative" style={{ width: `${columnWidths.statementBalance}px` }}>
+                  <SortableHeader label="Statement Balance" sortKey="amount" currentSort={dashboardSort} onSort={(k) => setDashboardSort({ key: k, direction: dashboardSort.key === k && dashboardSort.direction === 'asc' ? 'desc' : 'asc' })} />
+                  <div
+                    className="absolute right-0 top-0 w-1 h-full cursor-col-resize hover:bg-blue-400 group"
+                    onMouseDown={(e) => startResize('statementBalance', e)}
+                  >
+                    <div className="absolute inset-y-0 -left-1 -right-1" />
+                  </div>
+                </th>
+                <th className="p-4 relative" style={{ width: `${columnWidths.amountDue}px` }}>
+                  Amount Due
+                  <div
+                    className="absolute right-0 top-0 w-1 h-full cursor-col-resize hover:bg-blue-400 group"
+                    onMouseDown={(e) => startResize('amountDue', e)}
+                  >
+                    <div className="absolute inset-y-0 -left-1 -right-1" />
+                  </div>
+                </th>
+                <th className="p-4 relative" style={{ width: `${columnWidths.installments}px` }}>
+                  Active Installments
+                  <div
+                    className="absolute right-0 top-0 w-1 h-full cursor-col-resize hover:bg-blue-400 group"
+                    onMouseDown={(e) => startResize('installments', e)}
+                  >
+                    <div className="absolute inset-y-0 -left-1 -right-1" />
+                  </div>
+                </th>
+                <th className="relative" style={{ width: `${columnWidths.status}px` }}>
+                  <SortableHeader label="Status" sortKey="status" currentSort={dashboardSort} onSort={(k) => setDashboardSort({ key: k, direction: dashboardSort.key === k && dashboardSort.direction === 'asc' ? 'desc' : 'asc' })} />
+                  <div
+                    className="absolute right-0 top-0 w-1 h-full cursor-col-resize hover:bg-blue-400 group"
+                    onMouseDown={(e) => startResize('status', e)}
+                  >
+                    <div className="absolute inset-y-0 -left-1 -right-1" />
+                  </div>
+                </th>
+                <th className="p-4 relative" style={{ width: `${columnWidths.copy}px` }}>
+                  Copy
+                  <div
+                    className="absolute right-0 top-0 w-1 h-full cursor-col-resize hover:bg-blue-400 group"
+                    onMouseDown={(e) => startResize('copy', e)}
+                  >
+                    <div className="absolute inset-y-0 -left-1 -right-1" />
+                  </div>
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -227,16 +356,18 @@ export default function DashboardPage() {
                 return (
                   <tr key={card.id} className={cn(
                     "hover:bg-slate-50 transition-colors group",
-                    selectedCards.has(card.id) && "bg-blue-50/50"
+                    bulkSelectMode && selectedCards.has(card.id) && "bg-blue-50/50"
                   )}>
-                    <td className="p-4">
-                      <input 
-                        type="checkbox"
-                        checked={selectedCards.has(card.id)}
-                        onChange={() => toggleCardSelection(card.id)}
-                        className="w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500 cursor-pointer"
-                      />
-                    </td>
+                    {bulkSelectMode && (
+                      <td className="p-4">
+                        <input 
+                          type="checkbox"
+                          checked={selectedCards.has(card.id)}
+                          onChange={() => toggleCardSelection(card.id)}
+                          className="w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500 cursor-pointer"
+                        />
+                      </td>
+                    )}
                     <td className="p-4">
                       <div className="flex items-center gap-3">
                         <div 
@@ -397,7 +528,7 @@ export default function DashboardPage() {
               })}
               {visibleCards.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="p-8 text-center text-slate-500">
+                  <td colSpan={bulkSelectMode ? 8 : 7} className="p-8 text-center text-slate-500">
                     {multiProfileMode ? 'No cards found. Select profiles to view.' : 'No cards found for this profile.'}
                   </td>
                 </tr>

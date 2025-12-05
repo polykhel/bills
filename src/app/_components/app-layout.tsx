@@ -90,7 +90,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         onToggleProfileSelection={toggleProfileSelection}
       />
 
-      <div className="max-w-5xl mx-auto px-4 mt-6 mb-6">
+      <div className="max-w-7xl mx-auto px-4 mt-6 mb-6">
         <nav className="flex gap-1 border-b border-slate-200">
           {tabs.map((tab) => (
             <Link
@@ -108,7 +108,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </nav>
       </div>
 
-      <main className="max-w-5xl mx-auto px-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+      <main className="max-w-7xl mx-auto px-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
         {children}
       </main>
 

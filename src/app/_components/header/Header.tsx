@@ -31,7 +31,7 @@ export default function Header({
 }: HeaderProps) {
   return (
     <header className="bg-white border-b border-slate-200 sticky top-0 z-40">
-      <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="bg-blue-600 text-white p-1.5 rounded-lg">
             <CardIcon className="w-5 h-5" />
