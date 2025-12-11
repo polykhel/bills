@@ -3,8 +3,8 @@
 import React, { createContext, useContext, useState, useMemo, useRef, ReactNode, useEffect } from "react";
 import { format, setDate, parseISO, isValid } from "date-fns";
 import { getInstallmentStatus } from "../lib/utils";
-import { useProfiles, useCards, useStatements, useInstallments, useBankBalances, useCashInstallments } from "../lib/hooks";
-import type { CreditCard, Installment, Statement, SortConfig, CashInstallment } from "../lib/types";
+import { useProfiles, useCards, useStatements, useInstallments, useBankBalances, useCashInstallments, useOneTimeBills } from "../lib/hooks";
+import type { CreditCard, Installment, Statement, SortConfig, CashInstallment, OneTimeBill } from "../lib/types";
 import { Storage } from "../lib/storage";
 
 interface AppContextType {
@@ -57,6 +57,14 @@ interface AppContextType {
   deleteCashInstallment: (id: string) => void;
   toggleCashInstallmentPaid: (id: string) => void;
 
+  // One-time bills
+  oneTimeBills: ReturnType<typeof useOneTimeBills>['oneTimeBills'];
+  activeOneTimeBills: OneTimeBill[];
+  addOneTimeBill: (bill: Omit<OneTimeBill, "id">) => void;
+  updateOneTimeBill: (id: string, updates: Partial<OneTimeBill>) => void;
+  deleteOneTimeBill: (id: string) => void;
+  toggleOneTimeBillPaid: (id: string) => void;
+
   // Bank balances
   bankBalanceTrackingEnabled: boolean;
   setBankBalanceTrackingEnabled: (enabled: boolean) => void;
@@ -69,10 +77,14 @@ interface AppContextType {
   setEditingCard: (card: CreditCard | null) => void;
   editingInst: Installment | null;
   setEditingInst: (inst: Installment | null) => void;
+  editingOneTimeBill: OneTimeBill | null;
+  setEditingOneTimeBill: (bill: OneTimeBill | null) => void;
   showCardModal: boolean;
   setShowCardModal: (show: boolean) => void;
   showInstModal: boolean;
   setShowInstModal: (show: boolean) => void;
+  showOneTimeBillModal: boolean;
+  setShowOneTimeBillModal: (show: boolean) => void;
   showProfileModal: boolean;
   setShowProfileModal: (show: boolean) => void;
 
@@ -83,6 +95,8 @@ interface AppContextType {
   setManageCardSort: (config: SortConfig) => void;
   manageInstSort: SortConfig;
   setManageInstSort: (config: SortConfig) => void;
+  manageOneTimeBillSort: SortConfig;
+  setManageOneTimeBillSort: (config: SortConfig) => void;
 
   // Computed values
   getCardInstallmentTotal: (cardId: string) => number;
@@ -92,12 +106,15 @@ interface AppContextType {
   handleUpdateStatement: (cardId: string, updates: any) => void;
   handleTogglePaid: (cardId: string) => void;
   handleToggleCashInstallmentPaid: (cashInstallmentId: string) => void;
+  handleToggleOneTimeBillPaid: (oneTimeBillId: string) => void;
   handleSaveCard: (cardData: Omit<CreditCard, "id"> & { id?: string }) => void;
   handleSaveInstallment: (instData: Omit<Installment, "id"> & { id?: string }) => void;
+  handleSaveOneTimeBill: (billData: Omit<OneTimeBill, "id"> & { id?: string }) => void;
   handleSaveProfile: (name: string) => void;
   handleRenameProfile: (profileId: string, newName: string) => void;
   handleDeleteCard: (id: string) => void;
   handleDeleteInstallment: (id: string) => void;
+  handleDeleteOneTimeBill: (id: string) => void;
   handleTransferCard: (cardId: string, targetProfileId: string) => void;
   handleExportProfile: () => void;
   handleImportProfile: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -108,6 +125,8 @@ interface AppContextType {
   openEditCard: (card: CreditCard) => void;
   openAddInst: () => void;
   openEditInst: (inst: Installment) => void;
+  openAddOneTimeBill: () => void;
+  openEditOneTimeBill: (bill: OneTimeBill) => void;
   openTransferCard: (card: CreditCard) => void;
 
   // Transfer modal state
@@ -155,6 +174,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     generateCashInstallments,
     toggleCashInstallmentPaid
   } = useCashInstallments(isLoaded);
+  const { 
+    oneTimeBills, 
+    addOneTimeBill, 
+    updateOneTimeBill, 
+    deleteOneTimeBill, 
+    deleteOneTimeBillsForCard,
+    toggleOneTimeBillPaid
+  } = useOneTimeBills(isLoaded);
   const { bankBalances, updateBankBalance: updateBankBalanceBase, getBankBalance, getBalancesForProfiles } = useBankBalances(isLoaded);
 
   // Multi-profile mode state
@@ -192,8 +219,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // Modal state
   const [editingCard, setEditingCard] = useState<CreditCard | null>(null);
   const [editingInst, setEditingInst] = useState<Installment | null>(null);
+  const [editingOneTimeBill, setEditingOneTimeBill] = useState<OneTimeBill | null>(null);
   const [showCardModal, setShowCardModal] = useState(false);
   const [showInstModal, setShowInstModal] = useState(false);
+  const [showOneTimeBillModal, setShowOneTimeBillModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [transferringCard, setTransferringCard] = useState<CreditCard | null>(null);
   const [showTransferModal, setShowTransferModal] = useState(false);
@@ -202,6 +231,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [dashboardSort, setDashboardSort] = useState<SortConfig>({ key: 'dueDate', direction: 'asc' });
   const [manageCardSort, setManageCardSort] = useState<SortConfig>({ key: 'bankName', direction: 'asc' });
   const [manageInstSort, setManageInstSort] = useState<SortConfig>({ key: 'name', direction: 'asc' });
+  const [manageOneTimeBillSort, setManageOneTimeBillSort] = useState<SortConfig>({ key: 'dueDate', direction: 'asc' });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -218,6 +248,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return format(dueDate, "yyyy-MM") === monthKey;
     });
   }, [cashInstallments, monthKey]);
+
+  // Filter one-time bills for the current month
+  const activeOneTimeBills = useMemo(() => {
+    return oneTimeBills.filter(bill => {
+      const dueDate = parseISO(bill.dueDate);
+      if (!isValid(dueDate)) return false;
+      return format(dueDate, "yyyy-MM") === monthKey;
+    });
+  }, [oneTimeBills, monthKey]);
 
   // Determine visible cards based on mode
   const visibleCards = useMemo(() => {
@@ -253,12 +292,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
       .reduce((acc, ci) => acc + ci.amount, 0);
     billTotal += totalCashAmount;
     unpaidTotal += unpaidCashTotal;
+
+    // Add one-time bills to totals
+    const visibleOneTimeBills = activeOneTimeBills.filter(bill => visibleCardIds.has(bill.cardId));
+    const totalOneTimeBillAmount = visibleOneTimeBills.reduce((acc, bill) => acc + bill.amount, 0);
+    const unpaidOneTimeBillTotal = visibleOneTimeBills
+      .filter(bill => !bill.isPaid)
+      .reduce((acc, bill) => acc + bill.amount, 0);
+    billTotal += totalOneTimeBillAmount;
+    unpaidTotal += unpaidOneTimeBillTotal;
     
     // Add cash installments to installment total
     const cashInstallmentTotal = totalCashAmount;
     
     return { billTotal, unpaidTotal, installmentTotal: installmentTotal + cashInstallmentTotal };
-  }, [visibleCards, monthlyStatements, activeInstallments, activeCashInstallments]);
+  }, [visibleCards, monthlyStatements, activeInstallments, activeCashInstallments, activeOneTimeBills]);
 
   // Bank balance calculations
   const currentBankBalance = useMemo(() => {
@@ -338,6 +386,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
     toggleCashInstallmentPaid(cashInstallmentId);
   };
 
+  const handleToggleOneTimeBillPaid = (oneTimeBillId: string) => {
+    const bill = oneTimeBills.find(b => b.id === oneTimeBillId);
+    if (!bill) return;
+    
+    const wasPaid = bill.isPaid;
+    
+    // If bank balance tracking is enabled, update the balance
+    if (bankBalanceTrackingEnabled) {
+      if (!wasPaid) {
+        // Marking as paid: subtract from balance
+        const newBalance = currentBankBalance - bill.amount;
+        handleUpdateBankBalance(newBalance);
+      } else {
+        // Unmarking as paid: add back to balance
+        const newBalance = currentBankBalance + bill.amount;
+        handleUpdateBankBalance(newBalance);
+      }
+    }
+    
+    toggleOneTimeBillPaid(oneTimeBillId);
+  };
+
   const handleSaveCard = (cardData: Omit<CreditCard, "id"> & { id?: string }) => {
     if (cardData.id) {
       updateCard(cardData.id, cardData);
@@ -370,6 +440,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setEditingInst(null);
   };
 
+  const handleSaveOneTimeBill = (billData: Omit<OneTimeBill, "id"> & { id?: string }) => {
+    if (billData.id) {
+      updateOneTimeBill(billData.id, billData);
+    } else {
+      addOneTimeBill(billData);
+    }
+    setShowOneTimeBillModal(false);
+    setEditingOneTimeBill(null);
+  };
+
   const handleSaveProfile = (name: string) => {
     addProfile(name);
     setShowProfileModal(false);
@@ -383,12 +463,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const openEditCard = (card: CreditCard) => { setEditingCard(card); setShowCardModal(true); };
   const openAddInst = () => { setEditingInst(null); setShowInstModal(true); };
   const openEditInst = (inst: Installment) => { setEditingInst(inst); setShowInstModal(true); };
+  const openAddOneTimeBill = () => { setEditingOneTimeBill(null); setShowOneTimeBillModal(true); };
+  const openEditOneTimeBill = (bill: OneTimeBill) => { setEditingOneTimeBill(bill); setShowOneTimeBillModal(true); };
 
   const handleDeleteCard = (id: string) => {
     if (deleteCardBase(id)) {
       deleteStatementsForCard(id);
       deleteInstallmentsForCard(id);
       deleteCashInstallmentsForCard(id);
+      deleteOneTimeBillsForCard(id);
     }
   };
 
@@ -396,6 +479,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (deleteInstallmentBase(id)) {
       deleteCashInstallmentsForInstallment(id);
     }
+  };
+
+  const handleDeleteOneTimeBill = (id: string) => {
+    deleteOneTimeBill(id);
   };
 
   const handleTransferCard = (cardId: string, targetProfileId: string) => {
@@ -595,6 +682,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     updateCashInstallment,
     deleteCashInstallment,
     toggleCashInstallmentPaid,
+    oneTimeBills,
+    activeOneTimeBills,
+    addOneTimeBill,
+    updateOneTimeBill,
+    deleteOneTimeBill,
+    toggleOneTimeBillPaid,
     bankBalanceTrackingEnabled,
     setBankBalanceTrackingEnabled,
     currentBankBalance,
@@ -604,10 +697,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setEditingCard,
     editingInst,
     setEditingInst,
+    editingOneTimeBill,
+    setEditingOneTimeBill,
     showCardModal,
     setShowCardModal,
     showInstModal,
     setShowInstModal,
+    showOneTimeBillModal,
+    setShowOneTimeBillModal,
     showProfileModal,
     setShowProfileModal,
     dashboardSort,
@@ -616,17 +713,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setManageCardSort,
     manageInstSort,
     setManageInstSort,
+    manageOneTimeBillSort,
+    setManageOneTimeBillSort,
     getCardInstallmentTotal,
     totals,
     handleUpdateStatement,
     handleTogglePaid,
     handleToggleCashInstallmentPaid,
+    handleToggleOneTimeBillPaid,
     handleSaveCard,
     handleSaveInstallment,
+    handleSaveOneTimeBill,
     handleSaveProfile,
     handleRenameProfile,
     handleDeleteCard,
     handleDeleteInstallment,
+    handleDeleteOneTimeBill,
     handleTransferCard,
     handleExportProfile,
     handleImportProfile,
@@ -635,6 +737,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     openEditCard,
     openAddInst,
     openEditInst,
+    openAddOneTimeBill,
+    openEditOneTimeBill,
     openTransferCard,
     transferringCard,
     showTransferModal,

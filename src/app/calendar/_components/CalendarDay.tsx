@@ -25,11 +25,23 @@ interface CashInstallmentDueItem {
   multiProfileMode: boolean;
 }
 
+interface OneTimeBillDueItem {
+  id: string;
+  name: string;
+  amount: number;
+  isPaid: boolean;
+  bankName: string;
+  cardName: string;
+  profileName?: string;
+  multiProfileMode: boolean;
+}
+
 interface CalendarDayProps {
   dayNum: number;
   isToday: boolean;
   cardsDue: CardDueItem[];
   cashInstsDue: CashInstallmentDueItem[];
+  billsDue?: OneTimeBillDueItem[];
 }
 
 export function CalendarDay({
@@ -37,6 +49,7 @@ export function CalendarDay({
   isToday,
   cardsDue,
   cashInstsDue,
+  billsDue = [],
 }: CalendarDayProps) {
   return (
     <div
@@ -95,6 +108,31 @@ export function CalendarDay({
             {ci.multiProfileMode && ci.profileName && (
               <span className="text-[8px] text-purple-600 font-medium truncate">
                 {ci.profileName}
+              </span>
+            )}
+          </div>
+        ))}
+        {billsDue.map((bill) => (
+          <div
+            key={bill.id}
+            className={cn(
+              'text-[10px] px-1.5 py-1 rounded border-l-2 flex flex-col',
+              bill.isPaid
+                ? 'bg-green-50 text-green-700 border-green-500 opacity-60'
+                : 'bg-blue-50 text-blue-700 border-blue-500'
+            )}
+            title={`${bill.bankName} - ${bill.name}${
+              bill.multiProfileMode && bill.profileName ? ` (${bill.profileName})` : ''
+            }`}
+          >
+            <span className="font-semibold truncate">{bill.name}</span>
+            <span className="font-mono">
+              {bill.amount > 0 ? `₱${formatCurrency(bill.amount)}` : '₱-'}
+            </span>
+            <span className="text-[8px] text-blue-600 font-medium">One-Time Bill</span>
+            {bill.multiProfileMode && bill.profileName && (
+              <span className="text-[8px] text-purple-600 font-medium truncate">
+                {bill.profileName}
               </span>
             )}
           </div>

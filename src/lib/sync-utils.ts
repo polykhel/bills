@@ -35,12 +35,16 @@ export function hasLocalData(): boolean {
   const cards = Storage.getCards();
   const statements = Storage.getStatements();
   const installments = Storage.getInstallments();
+  const cashInstallments = Storage.getCashInstallments();
+  const oneTimeBills = Storage.getOneTimeBills();
 
   return (
     profiles.length > 0 ||
     cards.length > 0 ||
     statements.length > 0 ||
-    installments.length > 0
+    installments.length > 0 ||
+    cashInstallments.length > 0 ||
+    oneTimeBills.length > 0
   );
 }
 
@@ -53,6 +57,8 @@ export function getDataSize(): number {
     cards: Storage.getCards(),
     statements: Storage.getStatements(),
     installments: Storage.getInstallments(),
+    cashInstallments: Storage.getCashInstallments(),
+    oneTimeBills: Storage.getOneTimeBills(),
   };
 
   return new Blob([JSON.stringify(data)]).size;

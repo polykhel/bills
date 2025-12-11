@@ -7,10 +7,11 @@ import SortableHeader from '../../_components/ui/SortableHeader';
 import { EditableField } from '../../_components/ui/EditableField';
 
 interface DashboardData {
-  type: 'card' | 'cashInstallment';
+  type: 'card' | 'cashInstallment' | 'oneTimeBill';
   card: any;
   stmt?: any;
   cashInstallment?: any;
+  oneTimeBill?: any;
   displayDate: Date;
   displayAmount: number;
   isPaid: boolean;
@@ -31,8 +32,10 @@ interface BillsTableProps {
   onCopyCardInfo: (cardName: string, bankName: string, amount: number) => Promise<string>;
   onTogglePaid: (cardId: string) => void;
   onToggleCashInstallmentPaid: (installmentId: string) => void;
+  onToggleOneTimeBillPaid: (billId: string) => void;
   onUpdateStatement: (cardId: string, updates: any) => void;
   onUpdateCashInstallment: (installmentId: string, updates: any) => void;
+  onUpdateOneTimeBill: (billId: string, updates: any) => void;
   copiedId: string | null;
   setCopiedId: (id: string | null) => void;
   activeInstallments: any[];
@@ -53,8 +56,10 @@ export function BillsTable({
   onCopyCardInfo,
   onTogglePaid,
   onToggleCashInstallmentPaid,
+  onToggleOneTimeBillPaid,
   onUpdateStatement,
   onUpdateCashInstallment,
+  onUpdateOneTimeBill,
   copiedId,
   setCopiedId,
   activeInstallments,
@@ -180,7 +185,7 @@ export function BillsTable({
         <tbody className="divide-y divide-slate-100">
           {sortedData.map((data) => {
             const { card, displayDate, displayAmount, profile } = data;
-            const rowKey = data.type === 'card' ? card.id : `cash-${data.cashInstallment.id}`;
+            const rowKey = data.type === 'card' ? card.id : data.type === 'cashInstallment' ? `cash-${data.cashInstallment.id}` : `bill-${data.oneTimeBill.id}`;
 
             // Render cash installment row
             if (data.type === 'cashInstallment') {
@@ -298,6 +303,133 @@ export function BillsTable({
                         setTimeout(() => setCopiedId(null), 2000);
                       }}
                       title="Copy installment info"
+                      className={cn(
+                        'p-2 rounded-full transition-all duration-200',
+                        copiedId === rowKey
+                          ? 'text-green-600 bg-green-100'
+                          : 'text-slate-400 bg-slate-100 hover:bg-slate-200 hover:text-slate-600'
+                      )}
+                    >
+                      {copiedId === rowKey ? (
+                        <CheckCircle2 className="w-4 h-4" />
+                      ) : (
+                        <Copy className="w-4 h-4" />
+                      )}
+                    </button>
+                  </td>
+                </tr>
+              );
+            }
+
+            // Render one-time bill row
+            if (data.type === 'oneTimeBill') {
+              const { oneTimeBill } = data;
+              return (
+                <tr
+                  key={rowKey}
+                  className={cn(
+                    "hover:bg-slate-50 transition-colors group",
+                    bulkSelectMode && selectedCards.has(card.id) && "bg-blue-50/50"
+                  )}
+                >
+                  {bulkSelectMode && (
+                    <td className="p-4">
+                      <input
+                        type="checkbox"
+                        checked={selectedCards.has(card.id)}
+                        onChange={() => onToggleCardSelection(card.id)}
+                        className="w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500 cursor-pointer"
+                      />
+                    </td>
+                  )}
+                  <td className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="w-10 h-7 rounded-md shadow-sm flex items-center justify-center text-[10px] text-white font-bold tracking-wider"
+                        style={{ backgroundColor: card.color || '#334155' }}
+                      >
+                        {card.bankName.substring(0, 3)}
+                      </div>
+                      <div>
+                        <p className="font-semibold text-slate-800 text-sm">
+                          {oneTimeBill.name}
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-xs text-slate-500">
+                            {card.bankName} {card.cardName}
+                          </p>
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-700 border border-blue-200">
+                            One-Time
+                          </span>
+                          {multiProfileMode && profile && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-100 text-purple-700 border border-purple-200">
+                              {profile.name}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="p-4">
+                    <EditableField
+                      type="date"
+                      value={isValid(displayDate) ? format(displayDate, 'yyyy-MM-dd') : ''}
+                      onUpdate={(value) =>
+                        onUpdateOneTimeBill(oneTimeBill.id, { dueDate: value as string })
+                      }
+                      className="bg-transparent border-none p-0 text-sm font-medium text-slate-700 focus:ring-0 cursor-pointer w-32"
+                    />
+                  </td>
+                  <td className="p-4">
+                    <div className="text-sm font-medium text-slate-800">₱{formatCurrency(displayAmount)}</div>
+                  </td>
+                  <td className="p-4">
+                    <div className="text-sm font-medium text-slate-800">₱{formatCurrency(displayAmount)}</div>
+                  </td>
+                  <td className="p-4 text-center">
+                    <span className="text-xs text-slate-500">-</span>
+                  </td>
+                  <td className="p-4">
+                    <span
+                      className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${
+                        oneTimeBill.isPaid
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-orange-100 text-orange-700'
+                      }`}
+                    >
+                      {oneTimeBill.isPaid ? 'Paid' : 'Unpaid'}
+                    </span>
+                  </td>
+                  <td className="p-4 text-center">
+                    <button
+                      onClick={() => onToggleOneTimeBillPaid(oneTimeBill.id)}
+                      title={oneTimeBill.isPaid ? 'Mark as unpaid' : 'Mark as paid'}
+                      className={cn(
+                        'p-2 rounded-full transition-all duration-200',
+                        oneTimeBill.isPaid
+                          ? 'text-green-600 bg-green-100 hover:bg-green-200'
+                          : 'text-slate-300 bg-slate-100 hover:bg-slate-200 hover:text-slate-500'
+                      )}
+                    >
+                      {oneTimeBill.isPaid ? (
+                        <CheckCircle2 className="w-5 h-5" />
+                      ) : (
+                        <Circle className="w-5 h-5" />
+                      )}
+                    </button>
+                  </td>
+                  <td className="p-4 text-center">
+                    <button
+                      onClick={async () => {
+                        await onCopyCardInfo(
+                          oneTimeBill.name,
+                          `${card.bankName} ${card.cardName}`,
+                          displayAmount
+                        );
+                        setCopiedId(rowKey);
+                        setTimeout(() => setCopiedId(null), 2000);
+                      }}
+                      title="Copy bill info"
                       className={cn(
                         'p-2 rounded-full transition-all duration-200',
                         copiedId === rowKey

@@ -20,11 +20,13 @@ export default function DashboardPage() {
     multiProfileMode,
     activeInstallments,
     activeCashInstallments,
+    activeOneTimeBills,
     monthlyStatements,
     getCardInstallmentTotal,
     handleUpdateStatement,
     handleTogglePaid,
     handleToggleCashInstallmentPaid,
+    handleToggleOneTimeBillPaid,
     handleExportMonthCSV,
     bankBalanceTrackingEnabled,
     setBankBalanceTrackingEnabled,
@@ -33,6 +35,7 @@ export default function DashboardPage() {
     balanceStatus,
     isLoaded,
     updateCashInstallment,
+    updateOneTimeBill,
   } = useApp();
 
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -115,9 +118,14 @@ export default function DashboardPage() {
         const { card, stmt, displayAmount } = data;
         const amountDue = stmt?.adjustedAmount ?? displayAmount;
         return `${card.bankName} ${card.cardName}\t ${formatCurrency(amountDue)}`;
-      } else {
-        const { card, cashInstallment, displayAmount } = data;
+      } else if (data.type === 'cashInstallment') {
+        const { card, displayAmount } = data;
+        const cashInstallment = data.cashInstallment;
         return `${card.bankName} ${card.cardName} - ${cashInstallment.name} (${cashInstallment.term}/${cashInstallment.term})\t ${formatCurrency(displayAmount)}`;
+      } else {
+        const { card, displayAmount } = data;
+        const bill = data.oneTimeBill;
+        return `${card.bankName} ${card.cardName} - ${bill.name}\t ${formatCurrency(displayAmount)}`;
       }
     });
     await navigator.clipboard.writeText(lines.join('\n'));
@@ -173,8 +181,29 @@ export default function DashboardPage() {
       };
     });
 
+  // Create dashboard data for one-time bills
+  const oneTimeBillsData = activeOneTimeBills
+    .filter(bill => {
+      const card = visibleCards.find(c => c.id === bill.cardId);
+      return !!card;
+    })
+    .map(bill => {
+      const card = visibleCards.find(c => c.id === bill.cardId)!;
+      const displayDate = parseISO(bill.dueDate);
+      const profile = profiles.find(p => p.id === card.profileId);
+      return {
+        type: 'oneTimeBill' as const,
+        card,
+        oneTimeBill: bill,
+        displayDate,
+        displayAmount: bill.amount,
+        isPaid: bill.isPaid,
+        profile
+      };
+    });
+
   // Combine and sort all data
-  const sortedDashboardData = [...regularCardsData, ...cashInstallmentsData].sort((a, b) => {
+  const sortedDashboardData = [...regularCardsData, ...cashInstallmentsData, ...oneTimeBillsData].sort((a, b) => {
     const dir = dashboardSort.direction === 'asc' ? 1 : -1;
     switch (dashboardSort.key) {
       case 'bankName': return a.card.bankName.localeCompare(b.card.bankName) * dir;
@@ -235,8 +264,10 @@ export default function DashboardPage() {
           onCopyCardInfo={copyCardInfo}
           onTogglePaid={handleTogglePaid}
           onToggleCashInstallmentPaid={handleToggleCashInstallmentPaid}
+          onToggleOneTimeBillPaid={handleToggleOneTimeBillPaid}
           onUpdateStatement={handleUpdateStatement}
           onUpdateCashInstallment={updateCashInstallment}
+          onUpdateOneTimeBill={updateOneTimeBill}
           copiedId={copiedId}
           setCopiedId={setCopiedId}
           activeInstallments={activeInstallments}

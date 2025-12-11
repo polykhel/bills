@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Storage } from "./storage";
-import type { Profile, CreditCard, Statement, Installment, BankBalance, CashInstallment } from "./types";
+import type { Profile, CreditCard, Statement, Installment, BankBalance, CashInstallment, OneTimeBill } from "./types";
 
 export function useProfiles() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
@@ -356,5 +356,55 @@ export function useCashInstallments(isLoaded: boolean) {
     deleteCashInstallmentsForInstallment,
     generateCashInstallments,
     toggleCashInstallmentPaid,
+  };
+}
+
+export function useOneTimeBills(isLoaded: boolean) {
+  const [oneTimeBills, setOneTimeBills] = useState<OneTimeBill[]>([]);
+
+  useEffect(() => {
+    setOneTimeBills(Storage.getOneTimeBills());
+  }, []);
+
+  useEffect(() => {
+    if (isLoaded) {
+      Storage.saveOneTimeBills(oneTimeBills);
+    }
+  }, [oneTimeBills, isLoaded]);
+
+  const addOneTimeBill = (bill: Omit<OneTimeBill, "id">) => {
+    const newBill: OneTimeBill = { ...bill, id: crypto.randomUUID() };
+    setOneTimeBills(prev => [...prev, newBill]);
+  };
+
+  const updateOneTimeBill = (id: string, updates: Partial<OneTimeBill>) => {
+    setOneTimeBills(prev => prev.map(b => b.id === id ? { ...b, ...updates } : b));
+  };
+
+  const deleteOneTimeBill = (id: string) => {
+    if (confirm("Delete this one-time bill?")) {
+      setOneTimeBills(prev => prev.filter(b => b.id !== id));
+      return true;
+    }
+    return false;
+  };
+
+  const deleteOneTimeBillsForCard = (cardId: string) => {
+    setOneTimeBills(prev => prev.filter(b => b.cardId !== cardId));
+  };
+
+  const toggleOneTimeBillPaid = (id: string) => {
+    setOneTimeBills(prev => prev.map(b => 
+      b.id === id ? { ...b, isPaid: !b.isPaid } : b
+    ));
+  };
+
+  return {
+    oneTimeBills,
+    addOneTimeBill,
+    updateOneTimeBill,
+    deleteOneTimeBill,
+    deleteOneTimeBillsForCard,
+    toggleOneTimeBillPaid,
   };
 }

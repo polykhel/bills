@@ -1,4 +1,4 @@
-import type { Profile, CreditCard, Statement, Installment, BankBalance, CashInstallment } from './types';
+import type { Profile, CreditCard, Statement, Installment, BankBalance, CashInstallment, OneTimeBill } from './types';
 
 const KEYS = {
   PROFILES: 'bt_profiles',
@@ -6,6 +6,7 @@ const KEYS = {
   STATEMENTS: 'bt_statements',
   INSTALLMENTS: 'bt_installments',
   CASH_INSTALLMENTS: 'bt_cash_installments',
+  ONE_TIME_BILLS: 'bt_one_time_bills',
   BANK_BALANCES: 'bt_bank_balances',
   BANK_BALANCE_TRACKING_ENABLED: 'bt_bank_balance_tracking_enabled',
   ACTIVE_PROFILE_ID: 'bt_active_profile_id',
@@ -106,6 +107,9 @@ export const Storage = {
 
   getCashInstallments: () => loadData<CashInstallment>(KEYS.CASH_INSTALLMENTS),
   saveCashInstallments: (data: CashInstallment[]) => saveData(KEYS.CASH_INSTALLMENTS, data),
+
+  getOneTimeBills: () => loadData<OneTimeBill>(KEYS.ONE_TIME_BILLS),
+  saveOneTimeBills: (data: OneTimeBill[]) => saveData(KEYS.ONE_TIME_BILLS, data),
 
   getBankBalances: () => loadData<BankBalance>(KEYS.BANK_BALANCES),
   saveBankBalances: (data: BankBalance[]) => saveData(KEYS.BANK_BALANCES, data),

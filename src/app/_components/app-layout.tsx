@@ -6,6 +6,7 @@ import Header from "./header/Header";
 import { useApp } from "../providers";
 import CardFormModal from "./modals/CardFormModal";
 import InstallmentFormModal from "./modals/InstallmentFormModal";
+import { OneTimeBillModal } from "./modals/OneTimeBillModal";
 import ProfileFormModal from "./modals/ProfileFormModal";
 import TransferCardModal from "./modals/TransferCardModal";
 import { getInstallmentStatus } from "../../lib/utils";
@@ -27,6 +28,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     setShowCardModal,
     showInstModal,
     setShowInstModal,
+    showOneTimeBillModal,
+    setShowOneTimeBillModal,
     showProfileModal,
     setShowProfileModal,
     showTransferModal,
@@ -35,10 +38,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     setEditingCard,
     editingInst,
     setEditingInst,
+    editingOneTimeBill,
+    setEditingOneTimeBill,
     transferringCard,
     activeCards,
     handleSaveCard,
     handleSaveInstallment,
+    handleSaveOneTimeBill,
     handleSaveProfile,
     handleTransferCard,
     handleImportProfile,
@@ -138,6 +144,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         viewDate={viewDate}
         currentTerm={editingInst ? getInstallmentStatus(editingInst, viewDate).currentTerm : 1}
         onSave={handleSaveInstallment}
+      />
+
+      <OneTimeBillModal
+        isOpen={showOneTimeBillModal}
+        onClose={() => { setShowOneTimeBillModal(false); setEditingOneTimeBill(null); }}
+        editingBill={editingOneTimeBill}
+        cards={activeCards}
+        onSave={handleSaveOneTimeBill}
       />
 
       <ProfileFormModal

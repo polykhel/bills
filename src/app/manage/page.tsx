@@ -5,6 +5,7 @@ import { useApp } from "../providers";
 import { DataManagement } from './_components/DataManagement';
 import { ManageCards } from './_components/ManageCards';
 import { ManageInstallments } from './_components/ManageInstallments';
+import { ManageOneTimeBills } from './_components/ManageOneTimeBills';
 
 export default function ManagePage() {
   const {
@@ -26,6 +27,12 @@ export default function ManagePage() {
     openAddInst,
     openEditInst,
     handleDeleteInstallment,
+    oneTimeBills,
+    manageOneTimeBillSort,
+    setManageOneTimeBillSort,
+    openAddOneTimeBill,
+    openEditOneTimeBill,
+    handleDeleteOneTimeBill,
     handleExportProfile,
     fileInputRef,
     isLoaded,
@@ -82,6 +89,29 @@ export default function ManagePage() {
     });
   };
 
+  const filteredOneTimeBills = oneTimeBills.filter(bill => visibleCardIds.has(bill.cardId));
+  
+  const sortedManageOneTimeBills = [...filteredOneTimeBills].sort((a, b) => {
+    const dir = manageOneTimeBillSort.direction === 'asc' ? 1 : -1;
+    const cardA = visibleCards.find(c => c.id === a.cardId)?.bankName || '';
+    const cardB = visibleCards.find(c => c.id === b.cardId)?.bankName || '';
+    switch (manageOneTimeBillSort.key) {
+      case 'name': return a.name.localeCompare(b.name) * dir;
+      case 'card': return cardA.localeCompare(cardB) * dir;
+      case 'dueDate': return a.dueDate.localeCompare(b.dueDate) * dir;
+      case 'amount': return (a.amount - b.amount) * dir;
+      case 'isPaid': return ((a.isPaid ? 1 : 0) - (b.isPaid ? 1 : 0)) * dir;
+      default: return 0;
+    }
+  });
+
+  const handleOneTimeBillSort = (key: string) => {
+    setManageOneTimeBillSort({
+      key,
+      direction: manageOneTimeBillSort.key === key && manageOneTimeBillSort.direction === 'asc' ? 'desc' : 'asc'
+    });
+  };
+
   return (
     <div className="space-y-8">
       <DataManagement
@@ -110,6 +140,17 @@ export default function ManagePage() {
         onAddInstallment={openAddInst}
         onEditInstallment={openEditInst}
         onDeleteInstallment={handleDeleteInstallment}
+      />
+
+      <ManageOneTimeBills
+        bills={sortedManageOneTimeBills}
+        cards={visibleCards.map(c => ({ id: c.id, bankName: c.bankName, cardName: c.cardName }))}
+        viewDate={viewDate}
+        currentSort={manageOneTimeBillSort}
+        onSort={handleOneTimeBillSort}
+        onAddBill={openAddOneTimeBill}
+        onEditBill={openEditOneTimeBill}
+        onDeleteBill={handleDeleteOneTimeBill}
       />
     </div>
   );

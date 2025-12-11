@@ -15,6 +15,7 @@ export default function CalendarPage() {
     monthlyStatements,
     getCardInstallmentTotal,
     activeCashInstallments,
+    activeOneTimeBills,
     isLoaded,
   } = useApp();
 
@@ -87,6 +88,29 @@ export default function CalendarPage() {
               };
             });
 
+          // One-time bills due on this day
+          const billsDue = activeOneTimeBills
+            .filter(bill => {
+              const card = visibleCards.find(c => c.id === bill.cardId);
+              if (!card) return false;
+              const dueDate = parseISO(bill.dueDate);
+              return isValid(dueDate) && isSameDay(dueDate, day);
+            })
+            .map(bill => {
+              const card = visibleCards.find(c => c.id === bill.cardId)!;
+              const profile = profiles.find(p => p.id === card.profileId);
+              return {
+                id: bill.id,
+                name: bill.name,
+                amount: bill.amount,
+                isPaid: bill.isPaid,
+                bankName: card.bankName,
+                cardName: card.cardName,
+                profileName: profile?.name,
+                multiProfileMode,
+              };
+            });
+
           return (
             <CalendarDay
               key={day.toISOString()}
@@ -94,6 +118,7 @@ export default function CalendarPage() {
               isToday={isToday}
               cardsDue={cardsDue}
               cashInstsDue={cashInstsDue}
+              billsDue={billsDue}
             />
           );
         })}
