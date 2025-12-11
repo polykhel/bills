@@ -284,33 +284,51 @@ export default function DashboardPage() {
                     </div>
                   </th>
                 )}
-                <th className="relative" style={{ width: `${columnWidths.card}px` }}>
-                  <SortableHeader label="Card" sortKey="bankName" currentSort={dashboardSort} onSort={(k) => setDashboardSort({ key: k, direction: dashboardSort.key === k && dashboardSort.direction === 'asc' ? 'desc' : 'asc' })} />
+                <SortableHeader 
+                  label="Card" 
+                  sortKey="bankName" 
+                  currentSort={dashboardSort} 
+                  onSort={(k) => setDashboardSort({ key: k, direction: dashboardSort.key === k && dashboardSort.direction === 'asc' ? 'desc' : 'asc' })}
+                  className="relative"
+                  style={{ width: `${columnWidths.card}px` }}
+                >
                   <div
                     className="absolute right-0 top-0 w-1 h-full cursor-col-resize hover:bg-blue-400 group"
                     onMouseDown={(e) => startResize('card', e)}
                   >
                     <div className="absolute inset-y-0 -left-1 -right-1" />
                   </div>
-                </th>
-                <th className="relative" style={{ width: `${columnWidths.dueDate}px` }}>
-                  <SortableHeader label="Due Date" sortKey="dueDate" currentSort={dashboardSort} onSort={(k) => setDashboardSort({ key: k, direction: dashboardSort.key === k && dashboardSort.direction === 'asc' ? 'desc' : 'asc' })} />
+                </SortableHeader>
+                <SortableHeader 
+                  label="Due Date" 
+                  sortKey="dueDate" 
+                  currentSort={dashboardSort} 
+                  onSort={(k) => setDashboardSort({ key: k, direction: dashboardSort.key === k && dashboardSort.direction === 'asc' ? 'desc' : 'asc' })}
+                  className="relative"
+                  style={{ width: `${columnWidths.dueDate}px` }}
+                >
                   <div
                     className="absolute right-0 top-0 w-1 h-full cursor-col-resize hover:bg-blue-400 group"
                     onMouseDown={(e) => startResize('dueDate', e)}
                   >
                     <div className="absolute inset-y-0 -left-1 -right-1" />
                   </div>
-                </th>
-                <th className="relative" style={{ width: `${columnWidths.statementBalance}px` }}>
-                  <SortableHeader label="Statement Balance" sortKey="amount" currentSort={dashboardSort} onSort={(k) => setDashboardSort({ key: k, direction: dashboardSort.key === k && dashboardSort.direction === 'asc' ? 'desc' : 'asc' })} />
+                </SortableHeader>
+                <SortableHeader 
+                  label="Statement Balance" 
+                  sortKey="amount" 
+                  currentSort={dashboardSort} 
+                  onSort={(k) => setDashboardSort({ key: k, direction: dashboardSort.key === k && dashboardSort.direction === 'asc' ? 'desc' : 'asc' })}
+                  className="relative"
+                  style={{ width: `${columnWidths.statementBalance}px` }}
+                >
                   <div
                     className="absolute right-0 top-0 w-1 h-full cursor-col-resize hover:bg-blue-400 group"
                     onMouseDown={(e) => startResize('statementBalance', e)}
                   >
                     <div className="absolute inset-y-0 -left-1 -right-1" />
                   </div>
-                </th>
+                </SortableHeader>
                 <th className="p-4 relative" style={{ width: `${columnWidths.amountDue}px` }}>
                   Amount Due
                   <div
@@ -329,15 +347,21 @@ export default function DashboardPage() {
                     <div className="absolute inset-y-0 -left-1 -right-1" />
                   </div>
                 </th>
-                <th className="relative" style={{ width: `${columnWidths.status}px` }}>
-                  <SortableHeader label="Status" sortKey="status" currentSort={dashboardSort} onSort={(k) => setDashboardSort({ key: k, direction: dashboardSort.key === k && dashboardSort.direction === 'asc' ? 'desc' : 'asc' })} />
+                <SortableHeader 
+                  label="Status" 
+                  sortKey="status" 
+                  currentSort={dashboardSort} 
+                  onSort={(k) => setDashboardSort({ key: k, direction: dashboardSort.key === k && dashboardSort.direction === 'asc' ? 'desc' : 'asc' })}
+                  className="relative"
+                  style={{ width: `${columnWidths.status}px` }}
+                >
                   <div
                     className="absolute right-0 top-0 w-1 h-full cursor-col-resize hover:bg-blue-400 group"
                     onMouseDown={(e) => startResize('status', e)}
                   >
                     <div className="absolute inset-y-0 -left-1 -right-1" />
                   </div>
-                </th>
+                </SortableHeader>
                 <th className="p-4 relative" style={{ width: `${columnWidths.copy}px` }}>
                   Copy
                   <div
