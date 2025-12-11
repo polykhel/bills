@@ -146,7 +146,12 @@ export default function DashboardPage() {
         {bankBalanceTrackingEnabled && (
           <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
             <div className="flex items-center justify-between mb-2">
-              <p className="text-slate-500 text-sm font-medium">Bank Balance</p>
+              <p className="text-slate-500 text-sm font-medium">
+                Bank Balance
+                {multiProfileMode && profiles.length > 1 && (
+                  <span className="ml-2 text-[10px] text-amber-600 font-normal">(Sum of all profiles)</span>
+                )}
+              </p>
               <button
                 onClick={() => setBankBalanceTrackingEnabled(false)}
                 className="text-slate-400 hover:text-slate-600 text-xs"
@@ -160,7 +165,11 @@ export default function DashboardPage() {
               <input 
                 type="number" 
                 step="0.01"
-                className="w-full pl-5 pr-2 py-0 bg-transparent border-none focus:bg-slate-50 focus:ring-2 focus:ring-blue-200 rounded-lg text-3xl font-bold text-slate-800 transition-all"
+                disabled={multiProfileMode && profiles.length > 1}
+                className={cn(
+                  "w-full pl-5 pr-2 py-0 bg-transparent border-none focus:bg-slate-50 focus:ring-2 focus:ring-blue-200 rounded-lg text-3xl font-bold text-slate-800 transition-all",
+                  multiProfileMode && profiles.length > 1 && "opacity-60 cursor-not-allowed"
+                )}
                 placeholder="0.00"
                 value={currentBankBalance || ''}
                 onChange={(e) => {
@@ -173,6 +182,7 @@ export default function DashboardPage() {
                     updateBankBalance(parseFloat(value.toFixed(2)));
                   }
                 }}
+                title={multiProfileMode && profiles.length > 1 ? "Switch to single profile mode to edit bank balance" : ""}
               />
             </div>
             <div className={cn(
