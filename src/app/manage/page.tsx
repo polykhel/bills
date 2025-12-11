@@ -13,6 +13,8 @@ export default function ManagePage() {
     profiles,
     activeProfileId,
     activeCards,
+    visibleCards,
+    multiProfileMode,
     manageCardSort,
     setManageCardSort,
     openAddCard,
@@ -37,7 +39,7 @@ export default function ManagePage() {
 
   const profilesName = profiles.find(p => p.id === activeProfileId)?.name;
 
-  const sortedManageCards = [...activeCards].sort((a, b) => {
+  const sortedManageCards = [...visibleCards].sort((a, b) => {
     const dir = manageCardSort.direction === 'asc' ? 1 : -1;
     switch(manageCardSort.key) {
       case 'bankName': return a.bankName.localeCompare(b.bankName) * dir;
@@ -48,13 +50,13 @@ export default function ManagePage() {
     }
   });
 
-  const activeCardIds = new Set(activeCards.map(c => c.id));
-  const filteredInstallments = installments.filter(inst => activeCardIds.has(inst.cardId));
+  const visibleCardIds = new Set(visibleCards.map(c => c.id));
+  const filteredInstallments = installments.filter(inst => visibleCardIds.has(inst.cardId));
   
   const sortedManageInstallments = [...filteredInstallments].sort((a, b) => {
     const dir = manageInstSort.direction === 'asc' ? 1 : -1;
-    const cardA = activeCards.find(c => c.id === a.cardId)?.bankName || '';
-    const cardB = activeCards.find(c => c.id === b.cardId)?.bankName || '';
+    const cardA = visibleCards.find(c => c.id === a.cardId)?.bankName || '';
+    const cardB = visibleCards.find(c => c.id === b.cardId)?.bankName || '';
     switch(manageInstSort.key) {
       case 'name': return a.name.localeCompare(b.name) * dir;
       case 'card': return cardA.localeCompare(cardB) * dir;
@@ -97,7 +99,7 @@ export default function ManagePage() {
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-4">
             <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-              <CardIcon className="w-5 h-5" /> Cards ({profilesName})
+              <CardIcon className="w-5 h-5" /> Cards {multiProfileMode ? '(Multi-Profile)' : `(${profilesName})`}
             </h2>
             <div className="flex gap-2 text-xs text-slate-500">
               <button onClick={() => setManageCardSort({ key: 'bankName', direction: manageCardSort.key === 'bankName' && manageCardSort.direction === 'asc' ? 'desc' : 'asc' })} className={cn('hover:text-blue-600', manageCardSort.key === 'bankName' && 'text-blue-600 font-bold')}>Name</button>
@@ -147,7 +149,7 @@ export default function ManagePage() {
               </div>
             </div>
           ))}
-          {activeCards.length === 0 && <p className="col-span-3 text-center text-slate-400 py-4">No cards found for this profile.</p>}
+          {visibleCards.length === 0 && <p className="col-span-3 text-center text-slate-400 py-4">{multiProfileMode ? 'No cards found. Select profiles to view.' : 'No cards found for this profile.'}</p>}
         </div>
       </div>
 
@@ -177,7 +179,7 @@ export default function ManagePage() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {sortedManageInstallments.map(inst => {
-                const card = activeCards.find(c => c.id === inst.cardId);
+                const card = visibleCards.find(c => c.id === inst.cardId);
                 const status = getInstallmentStatus(inst, viewDate);
                 return (
                   <tr key={inst.id} className="hover:bg-slate-50 group">
