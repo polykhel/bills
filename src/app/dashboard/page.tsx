@@ -4,6 +4,7 @@ import { format, setDate, parseISO, isValid } from 'date-fns';
 import { FileSpreadsheet, CheckCircle2, Circle, Copy } from 'lucide-react';
 import { cn, formatCurrency } from '../../lib/utils';
 import SortableHeader from '../_components/ui/SortableHeader';
+import { EditableField } from '../_components/ui/EditableField';
 import { useApp } from "../providers";
 import { useState, useRef, useEffect } from 'react';
 
@@ -415,11 +416,11 @@ export default function DashboardPage() {
                     </td>
                     <td className="p-4">
                       <div className="flex flex-col">
-                        <input 
+                        <EditableField
                           type="date"
-                          className="bg-transparent border-none p-0 text-sm font-medium text-slate-700 focus:ring-0 cursor-pointer w-32"
                           value={isValid(displayDate) ? format(displayDate, 'yyyy-MM-dd') : ''}
-                          onChange={(e) => handleUpdateStatement(card.id, { customDueDate: e.target.value })}
+                          onUpdate={(value) => handleUpdateStatement(card.id, { customDueDate: value as string })}
+                          className="bg-transparent border-none p-0 text-sm font-medium text-slate-700 focus:ring-0 cursor-pointer w-32"
                         />
                         <span className="text-[10px] text-slate-400">Cut-off: {card.cutoffDay}th</span>
                       </div>
@@ -428,22 +429,16 @@ export default function DashboardPage() {
                       <div className="space-y-2">
                         <div className="relative max-w-[140px]">
                           <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-sm">₱</span>
-                          <input 
-                            type="number" 
+                          <EditableField
+                            type="number"
                             step="0.01"
+                            value={parseFloat(displayAmount.toFixed(2))}
+                            onUpdate={(value) => {
+                              const numValue = parseFloat(value as string);
+                              handleUpdateStatement(card.id, { amount: isNaN(numValue) ? 0 : parseFloat(numValue.toFixed(2)) });
+                            }}
                             className="w-full pl-6 pr-2 py-1.5 bg-slate-100 border-transparent focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 rounded-lg text-sm transition-all font-medium text-slate-800"
                             placeholder="0.00"
-                            value={stmt ? (parseFloat(displayAmount.toFixed(2) || '')) : parseFloat(displayAmount.toFixed(2))}
-                            onChange={(e) => {
-                              const value = parseFloat(e.target.value);
-                              handleUpdateStatement(card.id, { amount: isNaN(value) ? 0 : value });
-                            }}
-                            onBlur={(e) => {
-                              const value = parseFloat(e.target.value);
-                              if (!isNaN(value)) {
-                                handleUpdateStatement(card.id, { amount: parseFloat(value.toFixed(2)) });
-                              }
-                            }}
                           />
                         </div>
                         <div className="flex gap-1.5 flex-wrap">
@@ -471,22 +466,19 @@ export default function DashboardPage() {
                       <div className="space-y-2">
                         <div className="relative max-w-[140px]">
                           <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-sm">₱</span>
-                          <input 
-                            type="number" 
+                          <EditableField
+                            type="number"
                             step="0.01"
+                            value={stmt?.adjustedAmount !== undefined ? stmt.adjustedAmount : ''}
+                            onUpdate={(value) => {
+                              const strValue = value === '' ? undefined : value as string;
+                              const numValue = strValue === undefined ? undefined : parseFloat(strValue);
+                              handleUpdateStatement(card.id, { 
+                                adjustedAmount: numValue === undefined ? undefined : (isNaN(numValue) ? 0 : parseFloat(numValue.toFixed(2))) 
+                              });
+                            }}
                             className="w-full pl-6 pr-2 py-1.5 bg-slate-100 border-transparent focus:bg-white focus:border-purple-500 focus:ring-2 focus:ring-purple-200 rounded-lg text-sm transition-all font-medium text-slate-800"
                             placeholder={displayAmount.toFixed(2)}
-                            value={stmt?.adjustedAmount !== undefined ? stmt.adjustedAmount : ''}
-                            onChange={(e) => {
-                              const value = e.target.value === '' ? undefined : parseFloat(e.target.value);
-                              handleUpdateStatement(card.id, { adjustedAmount: value === undefined ? undefined : (isNaN(value) ? 0 : value) });
-                            }}
-                            onBlur={(e) => {
-                              const value = e.target.value === '' ? undefined : parseFloat(e.target.value);
-                              if (value !== undefined && !isNaN(value)) {
-                                handleUpdateStatement(card.id, { adjustedAmount: parseFloat(value.toFixed(2)) });
-                              }
-                            }}
                           />
                         </div>
                         {stmt?.adjustedAmount !== undefined && stmt.adjustedAmount !== displayAmount && (
