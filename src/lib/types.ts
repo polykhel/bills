@@ -11,6 +11,7 @@ export interface CreditCard {
   dueDay: number;
   cutoffDay: number;
   color: string;
+  isCashCard?: boolean;
 }
 
 export interface Statement {
@@ -32,6 +33,17 @@ export interface Installment {
   terms: number;
   monthlyAmortization: number;
   startDate: string;
+}
+
+export interface CashInstallment {
+  id: string;
+  installmentId: string;
+  cardId: string;
+  term: number;
+  dueDate: string;
+  amount: number;
+  isPaid: boolean;
+  name: string;
 }
 
 export interface BankBalance {

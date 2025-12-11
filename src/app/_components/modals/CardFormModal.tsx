@@ -30,6 +30,7 @@ export default function CardFormModal({
       dueDay: parseInt(formData.get("dueDay") as string),
       cutoffDay: parseInt(formData.get("cutoffDay") as string),
       color: formData.get("color") as string,
+      isCashCard: formData.get("isCashCard") === "on",
     };
     
     onSave(cardData);
@@ -111,6 +112,18 @@ export default function CardFormModal({
             defaultValue={editingCard?.color || "#334155"}
             className="w-full h-10 p-1 border rounded-lg cursor-pointer"
           />
+        </div>
+        <div className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            id="isCashCard"
+            name="isCashCard"
+            defaultChecked={editingCard?.isCashCard || false}
+            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+          />
+          <label htmlFor="isCashCard" className="text-sm font-medium text-slate-700 cursor-pointer">
+            Cash Card (installments shown as separate line items with custom due dates)
+          </label>
         </div>
         <button
           type="submit"

@@ -18,10 +18,12 @@ export default function DashboardPage() {
     profiles,
     multiProfileMode,
     activeInstallments,
+    activeCashInstallments,
     monthlyStatements,
     getCardInstallmentTotal,
     handleUpdateStatement,
     handleTogglePaid,
+    handleToggleCashInstallmentPaid,
     handleExportMonthCSV,
     bankBalanceTrackingEnabled,
     setBankBalanceTrackingEnabled,
@@ -29,6 +31,7 @@ export default function DashboardPage() {
     updateBankBalance,
     balanceStatus,
     isLoaded,
+    updateCashInstallment,
   } = useApp();
 
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -107,9 +110,15 @@ export default function DashboardPage() {
 
   const copySelectedCards = async () => {
     const sortedData = sortedDashboardData.filter(d => selectedCards.has(d.card.id));
-    const lines = sortedData.map(({ card, stmt, displayAmount }) => {
-      const amountDue = stmt?.adjustedAmount ?? displayAmount;
-      return `${card.bankName} ${card.cardName}\t ${formatCurrency(amountDue)}`;
+    const lines = sortedData.map((data) => {
+      if (data.type === 'card') {
+        const { card, stmt, displayAmount } = data;
+        const amountDue = stmt?.adjustedAmount ?? displayAmount;
+        return `${card.bankName} ${card.cardName}\t ${formatCurrency(amountDue)}`;
+      } else {
+        const { card, cashInstallment, displayAmount } = data;
+        return `${card.bankName} ${card.cardName} - ${cashInstallment.name} (${cashInstallment.term}/${cashInstallment.term})\t ${formatCurrency(displayAmount)}`;
+      }
     });
     await navigator.clipboard.writeText(lines.join('\n'));
     setBatchCopied(true);
@@ -120,16 +129,52 @@ export default function DashboardPage() {
     return null;
   }
 
-  const sortedDashboardData = visibleCards.map(card => {
-    const stmt = monthlyStatements.find(s => s.cardId === card.id);
-    const defaultDate = setDate(viewDate, card.dueDay);
-    const displayDate = stmt?.customDueDate ? parseISO(stmt.customDueDate) : defaultDate;
-    const cardInstTotal = getCardInstallmentTotal(card.id);
-    const displayAmount = stmt ? stmt.amount : cardInstTotal;
-    const isPaid = stmt?.isPaid || false;
-    const profile = profiles.find(p => p.id === card.profileId);
-    return { card, stmt, displayDate, displayAmount, isPaid, cardInstTotal, profile };
-  }).sort((a, b) => {
+  // Create dashboard data for regular cards
+  const regularCardsData = visibleCards
+    .filter(card => !card.isCashCard)
+    .map(card => {
+      const stmt = monthlyStatements.find(s => s.cardId === card.id);
+      const defaultDate = setDate(viewDate, card.dueDay);
+      const displayDate = stmt?.customDueDate ? parseISO(stmt.customDueDate) : defaultDate;
+      const cardInstTotal = getCardInstallmentTotal(card.id);
+      const displayAmount = stmt ? stmt.amount : cardInstTotal;
+      const isPaid = stmt?.isPaid || false;
+      const profile = profiles.find(p => p.id === card.profileId);
+      return { 
+        type: 'card' as const,
+        card, 
+        stmt, 
+        displayDate, 
+        displayAmount, 
+        isPaid, 
+        cardInstTotal, 
+        profile 
+      };
+    });
+
+  // Create dashboard data for cash installments
+  const cashInstallmentsData = activeCashInstallments
+    .filter(ci => {
+      const card = visibleCards.find(c => c.id === ci.cardId);
+      return card?.isCashCard;
+    })
+    .map(ci => {
+      const card = visibleCards.find(c => c.id === ci.cardId)!;
+      const displayDate = parseISO(ci.dueDate);
+      const profile = profiles.find(p => p.id === card.profileId);
+      return {
+        type: 'cashInstallment' as const,
+        card,
+        cashInstallment: ci,
+        displayDate,
+        displayAmount: ci.amount,
+        isPaid: ci.isPaid,
+        profile
+      };
+    });
+
+  // Combine and sort all data
+  const sortedDashboardData = [...regularCardsData, ...cashInstallmentsData].sort((a, b) => {
     const dir = dashboardSort.direction === 'asc' ? 1 : -1;
     switch (dashboardSort.key) {
       case 'bankName': return a.card.bankName.localeCompare(b.card.bankName) * dir;
@@ -385,11 +430,133 @@ export default function DashboardPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {sortedDashboardData.map(({ card, stmt, displayDate, displayAmount, cardInstTotal, profile }) => {
+              {sortedDashboardData.map((data) => {
+                const { card, displayDate, displayAmount, profile } = data;
+                const rowKey = data.type === 'card' ? card.id : `cash-${data.cashInstallment.id}`;
+                
+                // Render cash installment row
+                if (data.type === 'cashInstallment') {
+                  const { cashInstallment } = data;
+                  return (
+                    <tr key={rowKey} className={cn(
+                      "hover:bg-slate-50 transition-colors group",
+                      bulkSelectMode && selectedCards.has(card.id) && "bg-blue-50/50"
+                    )}>
+                      {bulkSelectMode && (
+                        <td className="p-4">
+                          <input 
+                            type="checkbox"
+                            checked={selectedCards.has(card.id)}
+                            onChange={() => toggleCardSelection(card.id)}
+                            className="w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500 cursor-pointer"
+                          />
+                        </td>
+                      )}
+                      <td className="p-4">
+                        <div className="flex items-center gap-3">
+                          <div 
+                            className="w-10 h-7 rounded-md shadow-sm flex items-center justify-center text-[10px] text-white font-bold tracking-wider"
+                            style={{ backgroundColor: card.color || '#334155' }}
+                          >
+                            {card.bankName.substring(0, 3)}
+                          </div>
+                          <div>
+                            <p className="font-semibold text-slate-800 text-sm">
+                              {cashInstallment.name}
+                              <span className="ml-2 text-xs text-slate-500 font-normal">
+                                ({cashInstallment.term})
+                              </span>
+                            </p>
+                            <div className="flex items-center gap-2">
+                              <p className="text-xs text-slate-500">{card.bankName} {card.cardName}</p>
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-green-100 text-green-700 border border-green-200">
+                                Cash
+                              </span>
+                              {multiProfileMode && profile && (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-100 text-purple-700 border border-purple-200">
+                                  {profile.name}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <EditableField
+                          type="date"
+                          value={isValid(displayDate) ? format(displayDate, 'yyyy-MM-dd') : ''}
+                          onUpdate={(value) => updateCashInstallment(cashInstallment.id, { dueDate: value as string })}
+                          className="bg-transparent border-none p-0 text-sm font-medium text-slate-700 focus:ring-0 cursor-pointer w-32"
+                        />
+                      </td>
+                      <td className="p-4">
+                        <div className="text-sm font-medium text-slate-800">₱{formatCurrency(displayAmount)}</div>
+                      </td>
+                      <td className="p-4">
+                        <div className="relative max-w-[140px]">
+                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-sm">₱</span>
+                          <EditableField
+                            type="number"
+                            step="0.01"
+                            value={parseFloat(displayAmount.toFixed(2))}
+                            onUpdate={(value) => {
+                              const numValue = parseFloat(value as string);
+                              updateCashInstallment(cashInstallment.id, { amount: isNaN(numValue) ? 0 : parseFloat(numValue.toFixed(2)) });
+                            }}
+                            className="w-full pl-6 pr-2 py-1.5 bg-slate-100 border-transparent focus:bg-white focus:border-purple-500 focus:ring-2 focus:ring-purple-200 rounded-lg text-sm transition-all font-medium text-slate-800"
+                            placeholder="0.00"
+                          />
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <span className="text-slate-400 text-xs italic">Cash Installment</span>
+                      </td>
+                      <td className="p-4 text-center">
+                        <button 
+                          onClick={() => handleToggleCashInstallmentPaid(cashInstallment.id)}
+                          title="Toggle Paid Status"
+                          className={cn(
+                            'p-2 rounded-full transition-all duration-200',
+                            cashInstallment.isPaid 
+                              ? 'text-green-600 bg-green-100 hover:bg-green-200' 
+                              : 'text-slate-300 bg-slate-100 hover:bg-slate-200 hover:text-slate-500'
+                          )}
+                        >
+                          {cashInstallment.isPaid ? <CheckCircle2 className="w-5 h-5" /> : <Circle className="w-5 h-5" />}
+                        </button>
+                      </td>
+                      <td className="p-4 text-center">
+                        <button 
+                          onClick={async () => {
+                            await copyCardInfo(cashInstallment.name, `${card.bankName} ${card.cardName}`, displayAmount);
+                            setCopiedId(rowKey);
+                            setTimeout(() => setCopiedId(null), 2000);
+                          }}
+                          title="Copy installment info"
+                          className={cn(
+                            'p-2 rounded-full transition-all duration-200',
+                            copiedId === rowKey
+                              ? 'text-green-600 bg-green-100'
+                              : 'text-slate-400 bg-slate-100 hover:bg-slate-200 hover:text-slate-600'
+                          )}
+                        >
+                          {copiedId === rowKey ? (
+                            <CheckCircle2 className="w-4 h-4" />
+                          ) : (
+                            <Copy className="w-4 h-4" />
+                          )}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                }
+                
+                // Render regular card row
+                const { stmt, cardInstTotal } = data;
                 const cardInsts = activeInstallments.filter((i: any) => i.cardId === card.id);
                 const amountDue = stmt?.adjustedAmount ?? displayAmount;
                 return (
-                  <tr key={card.id} className={cn(
+                  <tr key={rowKey} className={cn(
                     "hover:bg-slate-50 transition-colors group",
                     bulkSelectMode && selectedCards.has(card.id) && "bg-blue-50/50"
                   )}>
@@ -552,10 +719,10 @@ export default function DashboardPage() {
                   </tr>
                 );
               })}
-              {visibleCards.length === 0 && (
+              {sortedDashboardData.length === 0 && (
                 <tr>
                   <td colSpan={bulkSelectMode ? 8 : 7} className="p-8 text-center text-slate-500">
-                    {multiProfileMode ? 'No cards found. Select profiles to view.' : 'No cards found for this profile.'}
+                    {multiProfileMode ? 'No cards or installments found. Select profiles to view.' : 'No cards or installments found for this profile.'}
                   </td>
                 </tr>
               )}

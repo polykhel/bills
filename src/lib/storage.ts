@@ -1,10 +1,11 @@
-import type { Profile, CreditCard, Statement, Installment, BankBalance } from './types';
+import type { Profile, CreditCard, Statement, Installment, BankBalance, CashInstallment } from './types';
 
 const KEYS = {
   PROFILES: 'bt_profiles',
   CARDS: 'bt_cards',
   STATEMENTS: 'bt_statements',
   INSTALLMENTS: 'bt_installments',
+  CASH_INSTALLMENTS: 'bt_cash_installments',
   BANK_BALANCES: 'bt_bank_balances',
   BANK_BALANCE_TRACKING_ENABLED: 'bt_bank_balance_tracking_enabled',
   ACTIVE_PROFILE_ID: 'bt_active_profile_id',
@@ -102,6 +103,9 @@ export const Storage = {
   
   getInstallments: () => loadData<Installment>(KEYS.INSTALLMENTS),
   saveInstallments: (data: Installment[]) => saveData(KEYS.INSTALLMENTS, data),
+
+  getCashInstallments: () => loadData<CashInstallment>(KEYS.CASH_INSTALLMENTS),
+  saveCashInstallments: (data: CashInstallment[]) => saveData(KEYS.CASH_INSTALLMENTS, data),
 
   getBankBalances: () => loadData<BankBalance>(KEYS.BANK_BALANCES),
   saveBankBalances: (data: BankBalance[]) => saveData(KEYS.BANK_BALANCES, data),

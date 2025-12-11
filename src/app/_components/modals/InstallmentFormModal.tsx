@@ -27,12 +27,16 @@ export default function InstallmentFormModal({
   const [instMode, setInstMode] = useState<'date' | 'term'>('date');
   const [tempCurrentTerm, setTempCurrentTerm] = useState<number>(currentTerm);
   const [tempTerms, setTempTerms] = useState<number>(editingInstallment?.terms ?? 12);
+  const [selectedCardId, setSelectedCardId] = useState<string>(editingInstallment?.cardId ?? activeCards[0]?.id ?? '');
 
   // Reset tempCurrentTerm when editingInstallment or currentTerm changes
   useEffect(() => {
     setTempCurrentTerm(currentTerm);
     setTempTerms(editingInstallment?.terms ?? 12);
-  }, [editingInstallment, currentTerm]);
+    setSelectedCardId(editingInstallment?.cardId ?? activeCards[0]?.id ?? '');
+  }, [editingInstallment, currentTerm, activeCards]);
+
+  const selectedCard = activeCards.find(c => c.id === selectedCardId);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,15 +94,23 @@ export default function InstallmentFormModal({
           <select
             name="cardId"
             required
-            defaultValue={editingInstallment?.cardId}
+            value={selectedCardId}
+            onChange={(e) => setSelectedCardId(e.target.value)}
             className="w-full p-2 border rounded-lg text-sm bg-white"
           >
             {activeCards.map(c => (
               <option key={c.id} value={c.id}>
-                {c.bankName} - {c.cardName}
+                {c.bankName} - {c.cardName}{c.isCashCard ? ' (Cash)' : ''}
               </option>
             ))}
           </select>
+          {selectedCard?.isCashCard && (
+            <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-lg">
+              <p className="text-[11px] text-green-700 font-medium">
+                💰 Cash Card: Each installment will appear as a separate line item with its own due date in the dashboard and calendar.
+              </p>
+            </div>
+          )}
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Storage } from "./storage";
-import type { Profile, CreditCard, Statement, Installment, BankBalance } from "./types";
+import type { Profile, CreditCard, Statement, Installment, BankBalance, CashInstallment } from "./types";
 
 export function useProfiles() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
@@ -276,5 +276,85 @@ export function useBankBalances(isLoaded: boolean) {
     updateBankBalance,
     getBankBalance,
     getBalancesForProfiles,
+  };
+}
+export function useCashInstallments(isLoaded: boolean) {
+  const [cashInstallments, setCashInstallments] = useState<CashInstallment[]>([]);
+
+  useEffect(() => {
+    setCashInstallments(Storage.getCashInstallments());
+  }, []);
+
+  useEffect(() => {
+    if (isLoaded) {
+      Storage.saveCashInstallments(cashInstallments);
+    }
+  }, [cashInstallments, isLoaded]);
+
+  const addCashInstallment = (cashInst: Omit<CashInstallment, "id">) => {
+    const newInst: CashInstallment = { ...cashInst, id: crypto.randomUUID() };
+    setCashInstallments(prev => [...prev, newInst]);
+  };
+
+  const updateCashInstallment = (id: string, updates: Partial<CashInstallment>) => {
+    setCashInstallments(prev => prev.map(i => i.id === id ? { ...i, ...updates } : i));
+  };
+
+  const deleteCashInstallment = (id: string) => {
+    if (confirm("Delete this cash installment?")) {
+      setCashInstallments(prev => prev.filter(i => i.id !== id));
+      return true;
+    }
+    return false;
+  };
+
+  const deleteCashInstallmentsForCard = (cardId: string) => {
+    setCashInstallments(prev => prev.filter(i => i.cardId !== cardId));
+  };
+
+  const deleteCashInstallmentsForInstallment = (installmentId: string) => {
+    setCashInstallments(prev => prev.filter(i => i.installmentId !== installmentId));
+  };
+
+  const generateCashInstallments = (installment: Installment, card: CreditCard) => {
+    // Generate cash installments for each term
+    const newInstallments: CashInstallment[] = [];
+    const startDate = new Date(installment.startDate);
+    
+    for (let term = 1; term <= installment.terms; term++) {
+      const dueDate = new Date(startDate);
+      dueDate.setMonth(dueDate.getMonth() + (term - 1));
+      
+      newInstallments.push({
+        id: crypto.randomUUID(),
+        installmentId: installment.id,
+        cardId: installment.cardId,
+        term,
+        dueDate: dueDate.toISOString().split('T')[0],
+        amount: installment.monthlyAmortization,
+        isPaid: false,
+        name: installment.name,
+      });
+    }
+    
+    setCashInstallments(prev => [...prev, ...newInstallments]);
+    return newInstallments;
+  };
+
+  const toggleCashInstallmentPaid = (id: string) => {
+    setCashInstallments(prev => prev.map(i => 
+      i.id === id ? { ...i, isPaid: !i.isPaid } : i
+    ));
+  };
+
+  return {
+    cashInstallments,
+    addCashInstallment,
+    updateCashInstallment,
+    deleteCashInstallment,
+    deleteCashInstallmentsForCard,
+    deleteCashInstallmentsForInstallment,
+    generateCashInstallments,
+    toggleCashInstallmentPaid,
   };
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, getDay, setDate, parseISO } from 'date-fns';
+import { startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, getDay, setDate, parseISO, isValid } from 'date-fns';
 import { cn, formatCurrency } from '../../lib/utils';
 import { useApp } from "../providers";
 
@@ -12,6 +12,7 @@ export default function CalendarPage() {
     multiProfileMode,
     monthlyStatements,
     getCardInstallmentTotal,
+    activeCashInstallments,
     isLoaded,
   } = useApp();
 
@@ -38,12 +39,25 @@ export default function CalendarPage() {
         {days.map(day => {
           const dayNum = day.getDate();
           const isToday = isSameDay(day, new Date());
-          const cardsDue = visibleCards.filter(c => {
-            const stmt = monthlyStatements.find(s => s.cardId === c.id);
-            let targetDate = setDate(viewDate, c.dueDay);
-            if (stmt?.customDueDate) targetDate = parseISO(stmt.customDueDate);
-            return isSameDay(targetDate, day);
+          
+          // Regular cards due on this day
+          const cardsDue = visibleCards
+            .filter(c => !c.isCashCard)
+            .filter(c => {
+              const stmt = monthlyStatements.find(s => s.cardId === c.id);
+              let targetDate = setDate(viewDate, c.dueDay);
+              if (stmt?.customDueDate) targetDate = parseISO(stmt.customDueDate);
+              return isSameDay(targetDate, day);
+            });
+          
+          // Cash installments due on this day
+          const cashInstsDue = activeCashInstallments.filter(ci => {
+            const card = visibleCards.find(c => c.id === ci.cardId);
+            if (!card?.isCashCard) return false;
+            const dueDate = parseISO(ci.dueDate);
+            return isValid(dueDate) && isSameDay(dueDate, day);
           });
+          
           return (
             <div 
               key={day.toISOString()} 
@@ -73,6 +87,27 @@ export default function CalendarPage() {
                     >
                       <span className="font-semibold truncate">{c.bankName}</span>
                       <span className="font-mono">{amount > 0 ? `₱${formatCurrency(amount)}` : '₱-'}</span>
+                      {multiProfileMode && profile && (
+                        <span className="text-[8px] text-purple-600 font-medium truncate">{profile.name}</span>
+                      )}
+                    </div>
+                  );
+                })}
+                {cashInstsDue.map(ci => {
+                  const card = visibleCards.find(c => c.id === ci.cardId)!;
+                  const profile = profiles.find(p => p.id === card.profileId);
+                  return (
+                    <div 
+                      key={ci.id} 
+                      className={cn(
+                        'text-[10px] px-1.5 py-1 rounded border-l-2 flex flex-col',
+                        ci.isPaid ? 'bg-green-50 text-green-700 border-green-500 opacity-60' : 'bg-amber-50 text-amber-700 border-amber-500'
+                      )}
+                      title={`${card.bankName} - ${ci.name} (${ci.term})${multiProfileMode && profile ? ` (${profile.name})` : ''}`}
+                    >
+                      <span className="font-semibold truncate">{ci.name}</span>
+                      <span className="font-mono">{ci.amount > 0 ? `₱${formatCurrency(ci.amount)}` : '₱-'}</span>
+                      <span className="text-[8px] text-amber-600 font-medium">Cash - Term {ci.term}</span>
                       {multiProfileMode && profile && (
                         <span className="text-[8px] text-purple-600 font-medium truncate">{profile.name}</span>
                       )}

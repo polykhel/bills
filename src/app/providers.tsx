@@ -3,8 +3,8 @@
 import React, { createContext, useContext, useState, useMemo, useRef, ReactNode, useEffect } from "react";
 import { format, setDate, parseISO, isValid } from "date-fns";
 import { getInstallmentStatus } from "../lib/utils";
-import { useProfiles, useCards, useStatements, useInstallments, useBankBalances } from "../lib/hooks";
-import type { CreditCard, Installment, Statement, SortConfig } from "../lib/types";
+import { useProfiles, useCards, useStatements, useInstallments, useBankBalances, useCashInstallments } from "../lib/hooks";
+import type { CreditCard, Installment, Statement, SortConfig, CashInstallment } from "../lib/types";
 import { Storage } from "../lib/storage";
 
 interface AppContextType {
@@ -49,6 +49,14 @@ interface AppContextType {
   deleteInstallment: (id: string) => void;
   deleteInstallmentsForCard: (cardId: string) => void;
 
+  // Cash installments
+  cashInstallments: ReturnType<typeof useCashInstallments>['cashInstallments'];
+  activeCashInstallments: CashInstallment[];
+  addCashInstallment: (cashInst: Omit<CashInstallment, "id">) => void;
+  updateCashInstallment: (id: string, updates: Partial<CashInstallment>) => void;
+  deleteCashInstallment: (id: string) => void;
+  toggleCashInstallmentPaid: (id: string) => void;
+
   // Bank balances
   bankBalanceTrackingEnabled: boolean;
   setBankBalanceTrackingEnabled: (enabled: boolean) => void;
@@ -83,6 +91,7 @@ interface AppContextType {
   // Handler functions
   handleUpdateStatement: (cardId: string, updates: any) => void;
   handleTogglePaid: (cardId: string) => void;
+  handleToggleCashInstallmentPaid: (cashInstallmentId: string) => void;
   handleSaveCard: (cardData: Omit<CreditCard, "id"> & { id?: string }) => void;
   handleSaveInstallment: (instData: Omit<Installment, "id"> & { id?: string }) => void;
   handleSaveProfile: (name: string) => void;
@@ -136,6 +145,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const { cards, activeCards, addCard, updateCard, deleteCard: deleteCardBase, transferCard, getCardsForProfiles } = useCards(activeProfileId, isLoaded);
   const { statements, updateStatement, togglePaid, deleteStatementsForCard } = useStatements(isLoaded);
   const { installments, addInstallment, updateInstallment, deleteInstallment: deleteInstallmentBase, deleteInstallmentsForCard } = useInstallments(isLoaded);
+  const { 
+    cashInstallments, 
+    addCashInstallment, 
+    updateCashInstallment, 
+    deleteCashInstallment, 
+    deleteCashInstallmentsForCard,
+    deleteCashInstallmentsForInstallment,
+    generateCashInstallments,
+    toggleCashInstallmentPaid
+  } = useCashInstallments(isLoaded);
   const { bankBalances, updateBankBalance: updateBankBalanceBase, getBankBalance, getBalancesForProfiles } = useBankBalances(isLoaded);
 
   // Multi-profile mode state
@@ -190,6 +209,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const monthKey = format(viewDate, "yyyy-MM");
   const monthlyStatements = useMemo(() => statements.filter(s => s.monthStr === monthKey), [statements, monthKey]);
   const activeInstallments = useMemo(() => installments.map(inst => ({ ...inst, status: getInstallmentStatus(inst, viewDate) })).filter(i => i.status.isActive), [installments, viewDate]);
+  
+  // Filter cash installments for the current month
+  const activeCashInstallments = useMemo(() => {
+    return cashInstallments.filter(ci => {
+      const dueDate = parseISO(ci.dueDate);
+      if (!isValid(dueDate)) return false;
+      return format(dueDate, "yyyy-MM") === monthKey;
+    });
+  }, [cashInstallments, monthKey]);
 
   // Determine visible cards based on mode
   const visibleCards = useMemo(() => {
@@ -216,8 +244,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
       billTotal += effectiveAmount;
       if (!stmt?.isPaid) unpaidTotal += amountDue;
     });
-    return { billTotal, unpaidTotal, installmentTotal };
-  }, [visibleCards, monthlyStatements, activeInstallments]);
+    
+    // Add cash installments to totals
+    const visibleCashInstallments = activeCashInstallments.filter(ci => visibleCardIds.has(ci.cardId));
+    const totalCashAmount = visibleCashInstallments.reduce((acc, ci) => acc + ci.amount, 0);
+    const unpaidCashTotal = visibleCashInstallments
+      .filter(ci => !ci.isPaid)
+      .reduce((acc, ci) => acc + ci.amount, 0);
+    billTotal += totalCashAmount;
+    unpaidTotal += unpaidCashTotal;
+    
+    // Add cash installments to installment total
+    const cashInstallmentTotal = totalCashAmount;
+    
+    return { billTotal, unpaidTotal, installmentTotal: installmentTotal + cashInstallmentTotal };
+  }, [visibleCards, monthlyStatements, activeInstallments, activeCashInstallments]);
 
   // Bank balance calculations
   const currentBankBalance = useMemo(() => {
@@ -275,6 +316,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
     togglePaid(cardId, monthKey, cardInstTotal);
   };
 
+  const handleToggleCashInstallmentPaid = (cashInstallmentId: string) => {
+    const cashInst = cashInstallments.find(ci => ci.id === cashInstallmentId);
+    if (!cashInst) return;
+    
+    const wasPaid = cashInst.isPaid;
+    
+    // If bank balance tracking is enabled, update the balance
+    if (bankBalanceTrackingEnabled) {
+      if (!wasPaid) {
+        // Marking as paid: subtract from balance
+        const newBalance = currentBankBalance - cashInst.amount;
+        handleUpdateBankBalance(newBalance);
+      } else {
+        // Unmarking as paid: add back to balance
+        const newBalance = currentBankBalance + cashInst.amount;
+        handleUpdateBankBalance(newBalance);
+      }
+    }
+    
+    toggleCashInstallmentPaid(cashInstallmentId);
+  };
+
   const handleSaveCard = (cardData: Omit<CreditCard, "id"> & { id?: string }) => {
     if (cardData.id) {
       updateCard(cardData.id, cardData);
@@ -286,10 +349,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const handleSaveInstallment = (instData: Omit<Installment, "id"> & { id?: string }) => {
+    const card = cards.find(c => c.id === instData.cardId);
+    
     if (instData.id) {
       updateInstallment(instData.id, instData);
+      // If updating and card is cash card, regenerate cash installments
+      if (card?.isCashCard) {
+        deleteCashInstallmentsForInstallment(instData.id);
+        generateCashInstallments(instData as Installment, card);
+      }
     } else {
-      addInstallment(instData);
+      const newInst = { ...instData, id: crypto.randomUUID() };
+      addInstallment(newInst);
+      // If card is cash card, generate cash installments
+      if (card?.isCashCard) {
+        generateCashInstallments(newInst, card);
+      }
     }
     setShowInstModal(false);
     setEditingInst(null);
@@ -313,11 +388,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (deleteCardBase(id)) {
       deleteStatementsForCard(id);
       deleteInstallmentsForCard(id);
+      deleteCashInstallmentsForCard(id);
     }
   };
 
   const handleDeleteInstallment = (id: string) => {
-    deleteInstallmentBase(id);
+    if (deleteInstallmentBase(id)) {
+      deleteCashInstallmentsForInstallment(id);
+    }
   };
 
   const handleTransferCard = (cardId: string, targetProfileId: string) => {
@@ -511,6 +589,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     updateInstallment,
     deleteInstallment: deleteInstallmentBase,
     deleteInstallmentsForCard,
+    cashInstallments,
+    activeCashInstallments,
+    addCashInstallment,
+    updateCashInstallment,
+    deleteCashInstallment,
+    toggleCashInstallmentPaid,
     bankBalanceTrackingEnabled,
     setBankBalanceTrackingEnabled,
     currentBankBalance,
@@ -536,6 +620,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     totals,
     handleUpdateStatement,
     handleTogglePaid,
+    handleToggleCashInstallmentPaid,
     handleSaveCard,
     handleSaveInstallment,
     handleSaveProfile,
