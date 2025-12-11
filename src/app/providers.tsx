@@ -18,6 +18,7 @@ interface AppContextType {
   activeProfileId: string;
   setActiveProfileId: (id: string) => void;
   addProfile: (name: string) => void;
+  renameProfile: (profileId: string, newName: string) => void;
   isLoaded: boolean;
 
   // Multi-profile mode
@@ -85,6 +86,7 @@ interface AppContextType {
   handleSaveCard: (cardData: Omit<CreditCard, "id"> & { id?: string }) => void;
   handleSaveInstallment: (instData: Omit<Installment, "id"> & { id?: string }) => void;
   handleSaveProfile: (name: string) => void;
+  handleRenameProfile: (profileId: string, newName: string) => void;
   handleDeleteCard: (id: string) => void;
   handleDeleteInstallment: (id: string) => void;
   handleTransferCard: (cardId: string, targetProfileId: string) => void;
@@ -130,7 +132,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [viewDate]);
 
   // Custom hooks for data management
-  const { profiles, activeProfileId, setActiveProfileId, addProfile, isLoaded } = useProfiles();
+  const { profiles, activeProfileId, setActiveProfileId, addProfile, renameProfile, isLoaded } = useProfiles();
   const { cards, activeCards, addCard, updateCard, deleteCard: deleteCardBase, transferCard, getCardsForProfiles } = useCards(activeProfileId, isLoaded);
   const { statements, updateStatement, togglePaid, deleteStatementsForCard } = useStatements(isLoaded);
   const { installments, addInstallment, updateInstallment, deleteInstallment: deleteInstallmentBase, deleteInstallmentsForCard } = useInstallments(isLoaded);
@@ -296,6 +298,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const handleSaveProfile = (name: string) => {
     addProfile(name);
     setShowProfileModal(false);
+  };
+
+  const handleRenameProfile = (profileId: string, newName: string) => {
+    renameProfile(profileId, newName);
   };
 
   const openAddCard = () => { setEditingCard(null); setShowCardModal(true); };
@@ -480,6 +486,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     activeProfileId,
     setActiveProfileId,
     addProfile,
+    renameProfile,
     isLoaded,
     multiProfileMode,
     setMultiProfileMode,
@@ -532,6 +539,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     handleSaveCard,
     handleSaveInstallment,
     handleSaveProfile,
+    handleRenameProfile,
     handleDeleteCard,
     handleDeleteInstallment,
     handleTransferCard,

@@ -18,6 +18,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     profiles,
     activeProfileId,
     setActiveProfileId,
+    renameProfile,
     multiProfileMode,
     setMultiProfileMode,
     selectedProfileIds,
@@ -84,6 +85,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         activeProfileId={activeProfileId}
         onProfileChange={setActiveProfileId}
         onCreateProfile={() => setShowProfileModal(true)}
+        onRenameProfile={renameProfile}
         multiProfileMode={multiProfileMode}
         selectedProfileIds={selectedProfileIds}
         onToggleMultiProfileMode={handleToggleMultiProfileMode}

@@ -46,11 +46,18 @@ export function useProfiles() {
     setActiveProfileId(newProfile.id);
   };
 
+  const renameProfile = (profileId: string, newName: string) => {
+    setProfiles(profiles.map(p => 
+      p.id === profileId ? { ...p, name: newName } : p
+    ));
+  };
+
   return {
     profiles,
     activeProfileId,
     setActiveProfileId,
     addProfile,
+    renameProfile,
     isLoaded,
   };
 }

@@ -11,6 +11,7 @@ interface HeaderProps {
   activeProfileId: string;
   onProfileChange: (profileId: string) => void;
   onCreateProfile: () => void;
+  onRenameProfile: (profileId: string, newName: string) => void;
   multiProfileMode: boolean;
   selectedProfileIds: string[];
   onToggleMultiProfileMode: () => void;
@@ -24,6 +25,7 @@ export default function Header({
   activeProfileId,
   onProfileChange,
   onCreateProfile,
+  onRenameProfile,
   multiProfileMode,
   selectedProfileIds,
   onToggleMultiProfileMode,
@@ -49,6 +51,7 @@ export default function Header({
               activeProfileId={activeProfileId}
               onProfileChange={onProfileChange}
               onCreateProfile={onCreateProfile}
+              onRenameProfile={onRenameProfile}
             />
           )}
           <MultiProfileSelector
