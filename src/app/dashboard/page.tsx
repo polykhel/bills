@@ -42,16 +42,17 @@ export default function DashboardPage() {
   const [selectedCards, setSelectedCards] = useState<Set<string>>(new Set());
   const [batchCopied, setBatchCopied] = useState(false);
   const [bulkSelectMode, setBulkSelectMode] = useState(false);
+  const [showCopyColumn, setShowCopyColumn] = useState(false);
   
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>({
-    checkbox: 48,
-    card: 300,
-    dueDate: 150,
-    statementBalance: 180,
-    amountDue: 180,
-    installments: 200,
-    status: 100,
-    copy: 80
+    checkbox: 40,
+    card: 140,
+    dueDate: 100,
+    statementBalance: 120,
+    amountDue: 120,
+    installments: 100,
+    status: 80,
+    copy: 60
   });
   const [resizing, setResizing] = useState<{ column: string; startX: number; startWidth: number } | null>(null);
 
@@ -273,6 +274,7 @@ export default function DashboardPage() {
           activeInstallments={activeInstallments}
           multiProfileMode={multiProfileMode}
           isResizing={!!resizing}
+          showCopyColumn={showCopyColumn}
         />
       </div>
     </div>

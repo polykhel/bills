@@ -28,3 +28,12 @@ body {
 a, button {
   cursor: pointer;
 }
+
+/* Hide scrollbars for horizontally scrollable navs on mobile */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}

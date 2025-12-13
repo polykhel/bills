@@ -29,9 +29,10 @@ export default function CalendarPage() {
   const startDayIndex = getDay(start);
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6">
       <CalendarHeader days={['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']} />
-      <div className="grid grid-cols-7 gap-2">
+      <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
+        <div className="min-w-max grid grid-cols-7 gap-2">
         {Array.from({ length: startDayIndex }).map((_, i) => (
           <div key={`empty-${i}`} className="aspect-square" />
         ))}
@@ -122,6 +123,7 @@ export default function CalendarPage() {
             />
           );
         })}
+        </div>
       </div>
     </div>
   );

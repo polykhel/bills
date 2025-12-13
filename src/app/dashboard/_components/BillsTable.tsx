@@ -41,6 +41,7 @@ interface BillsTableProps {
   activeInstallments: any[];
   multiProfileMode: boolean;
   isResizing: boolean;
+  showCopyColumn: boolean;
 }
 
 export function BillsTable({
@@ -65,20 +66,23 @@ export function BillsTable({
   activeInstallments,
   multiProfileMode,
   isResizing,
+  showCopyColumn,
 }: BillsTableProps) {
   const tableRef = React.useRef<HTMLTableElement>(null);
 
   return (
-    <div className="overflow-x-auto">
+    <>
+      {/* Desktop Table View */}
+      <div className="hidden sm:block overflow-x-auto">
       <table
         ref={tableRef}
         className={cn("w-full text-left border-collapse", isResizing && "select-none")}
         style={{ tableLayout: 'fixed' }}
       >
-        <thead className="bg-slate-50 border-b border-slate-200 text-xs uppercase text-slate-500 font-semibold">
+        <thead className="bg-slate-50 border-b border-slate-200 text-[10px] sm:text-xs uppercase text-slate-500 font-semibold">
           <tr>
             {bulkSelectMode && (
-              <th className="p-4 relative" style={{ width: `${columnWidths.checkbox}px` }}>
+              <th className="p-2 sm:p-4 relative" style={{ width: `${columnWidths.checkbox}px` }}>
                 <input
                   type="checkbox"
                   checked={selectedCards.size === sortedData.length && sortedData.length > 0}
@@ -98,7 +102,7 @@ export function BillsTable({
               sortKey="bankName"
               currentSort={dashboardSort}
               onSort={(k) => onSort(k)}
-              className="relative"
+              className="relative text-[10px] sm:text-xs"
               style={{ width: `${columnWidths.card}px` }}
             >
               <div
@@ -171,7 +175,7 @@ export function BillsTable({
                 <div className="absolute inset-y-0 -left-1 -right-1" />
               </div>
             </SortableHeader>
-            <th className="p-4 relative" style={{ width: `${columnWidths.copy}px` }}>
+            <th className="p-4 relative hidden sm:table-cell" style={{ width: `${columnWidths.copy}px` }}>
               Copy
               <div
                 className="absolute right-0 top-0 w-1 h-full cursor-col-resize hover:bg-blue-400 group"
@@ -208,16 +212,16 @@ export function BillsTable({
                       />
                     </td>
                   )}
-                  <td className="p-4">
-                    <div className="flex items-center gap-3">
+                  <td className="p-2 sm:p-4">
+                    <div className="flex items-center gap-2 sm:gap-3">
                       <div
-                        className="w-10 h-7 rounded-md shadow-sm flex items-center justify-center text-[10px] text-white font-bold tracking-wider"
+                        className="w-8 h-6 sm:w-10 sm:h-7 rounded-md shadow-sm flex items-center justify-center text-[8px] sm:text-[10px] text-white font-bold tracking-wider"
                         style={{ backgroundColor: card.color || '#334155' }}
                       >
                         {card.bankName.substring(0, 3)}
                       </div>
                       <div>
-                        <p className="font-semibold text-slate-800 text-sm">
+                        <p className="font-semibold text-slate-800 text-xs sm:text-sm">{cashInstallment.name}
                           {cashInstallment.name}
                           <span className="ml-2 text-xs text-slate-500 font-normal">
                             ({cashInstallment.term})
@@ -239,22 +243,22 @@ export function BillsTable({
                       </div>
                     </div>
                   </td>
-                  <td className="p-4">
+                  <td className="p-2 sm:p-4">
                     <EditableField
                       type="date"
                       value={isValid(displayDate) ? format(displayDate, 'yyyy-MM-dd') : ''}
                       onUpdate={(value) =>
                         onUpdateCashInstallment(cashInstallment.id, { dueDate: value as string })
                       }
-                      className="bg-transparent border-none p-0 text-sm font-medium text-slate-700 focus:ring-0 cursor-pointer w-32"
+                      className="bg-transparent border-none p-0 text-xs sm:text-sm font-medium text-slate-700 focus:ring-0 cursor-pointer w-24 sm:w-32"
                     />
                   </td>
-                  <td className="p-4">
-                    <div className="text-sm font-medium text-slate-800">₱{formatCurrency(displayAmount)}</div>
+                  <td className="p-2 sm:p-4">
+                    <div className="text-xs sm:text-sm font-medium text-slate-800">₱{formatCurrency(displayAmount)}</div>
                   </td>
-                  <td className="p-4">
-                    <div className="relative max-w-[140px]">
-                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-sm">₱</span>
+                  <td className="p-2 sm:p-2 sm:p-4">
+                    <div className="relative max-w-[100px] sm:max-w-[140px]">
+                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-xs sm:text-sm">₱</span>
                       <EditableField
                         type="number"
                         step="0.01"
@@ -265,7 +269,7 @@ export function BillsTable({
                             amount: isNaN(numValue) ? 0 : parseFloat(numValue.toFixed(2)),
                           });
                         }}
-                        className="w-full pl-6 pr-2 py-1.5 bg-slate-100 border-transparent focus:bg-white focus:border-purple-500 focus:ring-2 focus:ring-purple-200 rounded-lg text-sm transition-all font-medium text-slate-800"
+                        className="w-full pl-6 pr-2 py-1 sm:py-1.5 bg-slate-100 border-transparent focus:bg-white focus:border-purple-500 focus:ring-2 focus:ring-purple-200 rounded-lg text-xs sm:text-sm transition-all font-medium text-slate-800"
                         placeholder="0.00"
                       />
                     </div>
@@ -273,12 +277,12 @@ export function BillsTable({
                   <td className="p-4">
                     <span className="text-slate-400 text-xs italic">Cash Installment</span>
                   </td>
-                  <td className="p-4 text-center">
+                  <td className="p-2 sm:p-4 text-center">
                     <button
                       onClick={() => onToggleCashInstallmentPaid(cashInstallment.id)}
                       title="Toggle Paid Status"
                       className={cn(
-                        'p-2 rounded-full transition-all duration-200',
+                        'p-1.5 sm:p-2 rounded-full transition-all duration-200 inline-flex items-center justify-center',
                         cashInstallment.isPaid
                           ? 'text-green-600 bg-green-100 hover:bg-green-200'
                           : 'text-slate-300 bg-slate-100 hover:bg-slate-200 hover:text-slate-500'
@@ -291,32 +295,34 @@ export function BillsTable({
                       )}
                     </button>
                   </td>
-                  <td className="p-4 text-center">
-                    <button
-                      onClick={async () => {
-                        await onCopyCardInfo(
-                          cashInstallment.name,
-                          `${card.bankName} ${card.cardName}`,
-                          displayAmount
-                        );
-                        setCopiedId(rowKey);
-                        setTimeout(() => setCopiedId(null), 2000);
-                      }}
-                      title="Copy installment info"
-                      className={cn(
-                        'p-2 rounded-full transition-all duration-200',
-                        copiedId === rowKey
-                          ? 'text-green-600 bg-green-100'
-                          : 'text-slate-400 bg-slate-100 hover:bg-slate-200 hover:text-slate-600'
-                      )}
-                    >
-                      {copiedId === rowKey ? (
-                        <CheckCircle2 className="w-4 h-4" />
-                      ) : (
-                        <Copy className="w-4 h-4" />
-                      )}
-                    </button>
-                  </td>
+                  {showCopyColumn && (
+                    <td className="p-2 sm:p-4 text-center hidden sm:table-cell">
+                      <button
+                        onClick={async () => {
+                          await onCopyCardInfo(
+                            cashInstallment.name,
+                            `${card.bankName} ${card.cardName}`,
+                            displayAmount
+                          );
+                          setCopiedId(rowKey);
+                          setTimeout(() => setCopiedId(null), 2000);
+                        }}
+                        title="Copy installment info"
+                        className={cn(
+                          'p-1.5 sm:p-2 rounded-full transition-all duration-200 inline-flex items-center justify-center',
+                          copiedId === rowKey
+                            ? 'text-green-600 bg-green-100'
+                            : 'text-slate-400 bg-slate-100 hover:bg-slate-200 hover:text-slate-600'
+                        )}
+                      >
+                        {copiedId === rowKey ? (
+                          <CheckCircle2 className="w-4 h-4" />
+                        ) : (
+                          <Copy className="w-4 h-4" />
+                        )}
+                      </button>
+                    </td>
+                  )}
                 </tr>
               );
             }
@@ -342,16 +348,16 @@ export function BillsTable({
                       />
                     </td>
                   )}
-                  <td className="p-4">
-                    <div className="flex items-center gap-3">
+                  <td className="p-2 sm:p-4">
+                    <div className="flex items-center gap-2 sm:gap-3">
                       <div
-                        className="w-10 h-7 rounded-md shadow-sm flex items-center justify-center text-[10px] text-white font-bold tracking-wider"
+                        className="w-8 h-6 sm:w-10 sm:h-7 rounded-md shadow-sm flex items-center justify-center text-[8px] sm:text-[10px] text-white font-bold tracking-wider"
                         style={{ backgroundColor: card.color || '#334155' }}
                       >
                         {card.bankName.substring(0, 3)}
                       </div>
                       <div>
-                        <p className="font-semibold text-slate-800 text-sm">
+                        <p className="font-semibold text-slate-800 text-xs sm:text-sm">
                           {oneTimeBill.name}
                         </p>
                         <div className="flex items-center gap-2">
@@ -400,12 +406,12 @@ export function BillsTable({
                       {oneTimeBill.isPaid ? 'Paid' : 'Unpaid'}
                     </span>
                   </td>
-                  <td className="p-4 text-center">
+                  <td className="p-2 sm:p-4 text-center">
                     <button
                       onClick={() => onToggleOneTimeBillPaid(oneTimeBill.id)}
                       title={oneTimeBill.isPaid ? 'Mark as unpaid' : 'Mark as paid'}
                       className={cn(
-                        'p-2 rounded-full transition-all duration-200',
+                        'p-1.5 sm:p-2 rounded-full transition-all duration-200 inline-flex items-center justify-center',
                         oneTimeBill.isPaid
                           ? 'text-green-600 bg-green-100 hover:bg-green-200'
                           : 'text-slate-300 bg-slate-100 hover:bg-slate-200 hover:text-slate-500'
@@ -418,32 +424,34 @@ export function BillsTable({
                       )}
                     </button>
                   </td>
-                  <td className="p-4 text-center">
-                    <button
-                      onClick={async () => {
-                        await onCopyCardInfo(
-                          oneTimeBill.name,
-                          `${card.bankName} ${card.cardName}`,
-                          displayAmount
-                        );
-                        setCopiedId(rowKey);
-                        setTimeout(() => setCopiedId(null), 2000);
-                      }}
-                      title="Copy bill info"
-                      className={cn(
-                        'p-2 rounded-full transition-all duration-200',
-                        copiedId === rowKey
-                          ? 'text-green-600 bg-green-100'
-                          : 'text-slate-400 bg-slate-100 hover:bg-slate-200 hover:text-slate-600'
-                      )}
-                    >
-                      {copiedId === rowKey ? (
-                        <CheckCircle2 className="w-4 h-4" />
-                      ) : (
-                        <Copy className="w-4 h-4" />
-                      )}
-                    </button>
-                  </td>
+                  {showCopyColumn && (
+                    <td className="p-2 sm:p-4 text-center hidden sm:table-cell">
+                      <button
+                        onClick={async () => {
+                          await onCopyCardInfo(
+                            oneTimeBill.name,
+                            `${card.bankName} ${card.cardName}`,
+                            displayAmount
+                          );
+                          setCopiedId(rowKey);
+                          setTimeout(() => setCopiedId(null), 2000);
+                        }}
+                        title="Copy bill info"
+                        className={cn(
+                          'p-1.5 sm:p-2 rounded-full transition-all duration-200 inline-flex items-center justify-center',
+                          copiedId === rowKey
+                            ? 'text-green-600 bg-green-100'
+                            : 'text-slate-400 bg-slate-100 hover:bg-slate-200 hover:text-slate-600'
+                        )}
+                      >
+                        {copiedId === rowKey ? (
+                          <CheckCircle2 className="w-4 h-4" />
+                        ) : (
+                          <Copy className="w-4 h-4" />
+                        )}
+                      </button>
+                    </td>
+                  )}
                 </tr>
               );
             }
@@ -462,7 +470,7 @@ export function BillsTable({
                 )}
               >
                 {bulkSelectMode && (
-                  <td className="p-4">
+                  <td className="p-2 sm:p-4">
                     <input
                       type="checkbox"
                       checked={selectedCards.has(card.id)}
@@ -471,18 +479,18 @@ export function BillsTable({
                     />
                   </td>
                 )}
-                <td className="p-4">
-                  <div className="flex items-center gap-3">
+                <td className="p-2 sm:p-4">
+                  <div className="flex items-center gap-2 sm:gap-3">
                     <div
-                      className="w-10 h-7 rounded-md shadow-sm flex items-center justify-center text-[10px] text-white font-bold tracking-wider"
+                      className="w-8 h-6 sm:w-10 sm:h-7 rounded-md shadow-sm flex items-center justify-center text-[8px] sm:text-[10px] text-white font-bold tracking-wider"
                       style={{ backgroundColor: card.color || '#334155' }}
                     >
                       {card.bankName.substring(0, 3)}
                     </div>
                     <div>
-                      <p className="font-semibold text-slate-800 text-sm">{card.cardName}</p>
-                      <div className="flex items-center gap-2">
-                        <p className="text-xs text-slate-500">{card.bankName}</p>
+                      <p className="font-semibold text-slate-800 text-xs sm:text-sm">{card.cardName}</p>
+                      <div className="flex items-center gap-1 sm:gap-2">
+                        <p className="text-[10px] sm:text-xs text-slate-500">{card.bankName}</p>
                         {multiProfileMode && profile && (
                           <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-100 text-purple-700 border border-purple-200">
                             {profile.name}
@@ -492,7 +500,7 @@ export function BillsTable({
                     </div>
                   </div>
                 </td>
-                <td className="p-4">
+                <td className="p-2 sm:p-4">
                   <div className="flex flex-col">
                     <EditableField
                       type="date"
@@ -500,15 +508,15 @@ export function BillsTable({
                       onUpdate={(value) =>
                         onUpdateStatement(card.id, { customDueDate: value as string })
                       }
-                      className="bg-transparent border-none p-0 text-sm font-medium text-slate-700 focus:ring-0 cursor-pointer w-32"
+                      className="bg-transparent border-none p-0 text-xs sm:text-sm font-medium text-slate-700 focus:ring-0 cursor-pointer w-24 sm:w-32"
                     />
-                    <span className="text-[10px] text-slate-400">Cut-off: {card.cutoffDay}th</span>
+                    <span className="text-[8px] sm:text-[10px] text-slate-400">Cut-off: {card.cutoffDay}th</span>
                   </div>
                 </td>
-                <td className="p-4">
-                  <div className="space-y-2">
-                    <div className="relative max-w-[140px]">
-                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-sm">₱</span>
+                <td className="p-2 sm:p-4">
+                  <div className="space-y-1.5 sm:space-y-2">
+                    <div className="relative max-w-[100px] sm:max-w-[140px]">
+                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-xs sm:text-sm">₱</span>
                       <EditableField
                         type="number"
                         step="0.01"
@@ -519,13 +527,13 @@ export function BillsTable({
                             amount: isNaN(numValue) ? 0 : parseFloat(numValue.toFixed(2)),
                           });
                         }}
-                        className="w-full pl-6 pr-2 py-1.5 bg-slate-100 border-transparent focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 rounded-lg text-sm transition-all font-medium text-slate-800"
+                        className="w-full pl-6 pr-2 py-1 sm:py-1.5 bg-slate-100 border-transparent focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 rounded-lg text-xs sm:text-sm transition-all font-medium text-slate-800"
                         placeholder="0.00"
                       />
                     </div>
-                    <div className="flex gap-1.5 flex-wrap">
+                    <div className="flex gap-1 sm:gap-1.5 flex-wrap">
                       {!stmt && (cardInstTotal ?? 0) > 0 && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-100 text-amber-700 text-[10px] font-semibold rounded-full border border-amber-200">
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-amber-100 text-amber-700 text-[8px] sm:text-[10px] font-semibold rounded-full border border-amber-200">
                           Est.
                         </span>
                       )}
@@ -538,7 +546,7 @@ export function BillsTable({
                           })
                         }
                         className={cn(
-                          'inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-full border transition-all',
+                          'inline-flex items-center gap-1 px-1.5 py-0.5 text-[8px] sm:text-[10px] font-semibold rounded-full border transition-all',
                           stmt?.isUnbilled === false
                             ? 'bg-green-100 text-green-700 border-green-200 hover:bg-green-200'
                             : 'bg-blue-100 text-blue-600 border-blue-200 hover:bg-blue-200'
@@ -549,10 +557,10 @@ export function BillsTable({
                     </div>
                   </div>
                 </td>
-                <td className="p-4">
-                  <div className="space-y-2">
-                    <div className="relative max-w-[140px]">
-                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-sm">₱</span>
+                <td className="p-2 sm:p-4">
+                  <div className="space-y-1.5 sm:space-y-2">
+                    <div className="relative max-w-[100px] sm:max-w-[140px]">
+                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-xs sm:text-sm">₱</span>
                       <EditableField
                         type="number"
                         step="0.01"
@@ -569,12 +577,12 @@ export function BillsTable({
                                   : parseFloat(numValue.toFixed(2)),
                           });
                         }}
-                        className="w-full pl-6 pr-2 py-1.5 bg-slate-100 border-transparent focus:bg-white focus:border-purple-500 focus:ring-2 focus:ring-purple-200 rounded-lg text-sm transition-all font-medium text-slate-800"
+                        className="w-full pl-6 pr-2 py-1 sm:py-1.5 bg-slate-100 border-transparent focus:bg-white focus:border-purple-500 focus:ring-2 focus:ring-purple-200 rounded-lg text-xs sm:text-sm transition-all font-medium text-slate-800"
                         placeholder={displayAmount.toFixed(2)}
                       />
                     </div>
                     {stmt?.adjustedAmount !== undefined && stmt.adjustedAmount !== displayAmount && (
-                      <div className="text-[10px] text-slate-500">
+                      <div className="text-[8px] sm:text-[10px] text-slate-500">
                         {stmt.adjustedAmount < displayAmount ? (
                           <span className="text-green-600">
                             -₱{formatCurrency(displayAmount - stmt.adjustedAmount)} saved
@@ -588,30 +596,30 @@ export function BillsTable({
                     )}
                   </div>
                 </td>
-                <td className="p-4">
-                  <div className="space-y-1">
+                <td className="p-2 sm:p-4">
+                  <div className="space-y-0.5 sm:space-y-1">
                     {cardInsts.map((inst: any) => (
                       <div
                         key={inst.id}
-                        className="flex items-center justify-between text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded border border-blue-100"
+                        className="flex items-center justify-between text-[10px] sm:text-xs bg-blue-50 text-blue-700 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded border border-blue-100"
                       >
-                        <span className="truncate max-w-[100px] font-medium">{inst.name}</span>
-                        <span className="opacity-75 font-mono">
+                        <span className="truncate max-w-[70px] sm:max-w-[100px] font-medium">{inst.name}</span>
+                        <span className="opacity-75 font-mono text-[8px] sm:text-xs">
                           {inst.status.currentTerm}/{inst.terms}
                         </span>
                       </div>
                     ))}
                     {cardInsts.length === 0 && (
-                      <span className="text-slate-300 text-xs italic">None</span>
+                      <span className="text-slate-300 text-[10px] sm:text-xs italic">None</span>
                     )}
                   </div>
                 </td>
-                <td className="p-4 text-center">
+                <td className="p-2 sm:p-4 text-center">
                   <button
                     onClick={() => onTogglePaid(card.id)}
                     title="Toggle Paid Status"
                     className={cn(
-                      'p-2 rounded-full transition-all duration-200',
+                      'p-1.5 sm:p-2 rounded-full transition-all duration-200 inline-flex items-center justify-center',
                       stmt?.isPaid
                         ? 'text-green-600 bg-green-100 hover:bg-green-200'
                         : 'text-slate-300 bg-slate-100 hover:bg-slate-200 hover:text-slate-500'
@@ -624,34 +632,36 @@ export function BillsTable({
                     )}
                   </button>
                 </td>
-                <td className="p-4 text-center">
-                  <button
-                    onClick={async () => {
-                      await onCopyCardInfo(card.cardName, card.bankName, amountDue);
-                      setCopiedId(card.id);
-                      setTimeout(() => setCopiedId(null), 2000);
-                    }}
-                    title="Copy card info"
-                    className={cn(
-                      'p-2 rounded-full transition-all duration-200',
-                      copiedId === card.id
-                        ? 'text-green-600 bg-green-100'
-                        : 'text-slate-400 bg-slate-100 hover:bg-slate-200 hover:text-slate-600'
-                    )}
-                  >
-                    {copiedId === card.id ? (
-                      <CheckCircle2 className="w-4 h-4" />
-                    ) : (
-                      <Copy className="w-4 h-4" />
-                    )}
-                  </button>
-                </td>
+                {showCopyColumn && (
+                  <td className="p-2 sm:p-4 text-center hidden sm:table-cell">
+                    <button
+                      onClick={async () => {
+                        await onCopyCardInfo(card.cardName, card.bankName, amountDue);
+                        setCopiedId(card.id);
+                        setTimeout(() => setCopiedId(null), 2000);
+                      }}
+                      title="Copy card info"
+                      className={cn(
+                        'p-1.5 sm:p-2 rounded-full transition-all duration-200 inline-flex items-center justify-center',
+                        copiedId === card.id
+                          ? 'text-green-600 bg-green-100'
+                          : 'text-slate-400 bg-slate-100 hover:bg-slate-200 hover:text-slate-600'
+                      )}
+                    >
+                      {copiedId === card.id ? (
+                        <CheckCircle2 className="w-4 h-4" />
+                      ) : (
+                        <Copy className="w-4 h-4" />
+                      )}
+                    </button>
+                  </td>
+                )}
               </tr>
             );
           })}
           {sortedData.length === 0 && (
             <tr>
-              <td colSpan={bulkSelectMode ? 8 : 7} className="p-8 text-center text-slate-500">
+              <td colSpan={bulkSelectMode ? (showCopyColumn ? 9 : 8) : (showCopyColumn ? 8 : 7)} className="p-4 sm:p-8 text-center text-slate-500 text-sm">
                 {multiProfileMode
                   ? 'No cards or installments found. Select profiles to view.'
                   : 'No cards or installments found for this profile.'}
@@ -660,7 +670,166 @@ export function BillsTable({
           )}
         </tbody>
       </table>
-    </div>
+      </div>
+
+      {/* Mobile Card View */}
+      <div className="sm:hidden space-y-3 p-4">
+        {sortedData.map((data) => {
+          const { card, displayDate, displayAmount, profile } = data;
+          const rowKey = data.type === 'card' ? card.id : data.type === 'cashInstallment' ? `cash-${data.cashInstallment.id}` : `bill-${data.oneTimeBill.id}`;
+
+          if (data.type === 'cashInstallment') {
+            const { cashInstallment } = data;
+            return (
+              <div key={rowKey} className="bg-slate-50 rounded-lg border border-slate-200 p-3 space-y-2">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="w-8 h-6 rounded-md shadow-sm flex items-center justify-center text-[8px] text-white font-bold tracking-wider"
+                      style={{ backgroundColor: card.color || '#334155' }}
+                    >
+                      {card.bankName.substring(0, 3)}
+                    </div>
+                    <div>
+                      <p className="font-semibold text-slate-800 text-xs">{cashInstallment.name}</p>
+                      <p className="text-[10px] text-slate-500">{card.bankName} {card.cardName}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => onToggleCashInstallmentPaid(cashInstallment.id)}
+                    className={cn(
+                      'p-1.5 rounded-full transition-all',
+                      cashInstallment.isPaid
+                        ? 'text-green-600 bg-green-100'
+                        : 'text-slate-300 bg-slate-100'
+                    )}
+                  >
+                    {cashInstallment.isPaid ? <CheckCircle2 className="w-4 h-4" /> : <Circle className="w-4 h-4" />}
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <span className="text-slate-500">Due Date</span>
+                    <p className="font-medium text-slate-700">{format(displayDate, 'MMM dd')}</p>
+                  </div>
+                  <div>
+                    <span className="text-slate-500">Amount</span>
+                    <p className="font-medium text-slate-700">₱{formatCurrency(displayAmount)}</p>
+                  </div>
+                </div>
+              </div>
+            );
+          }
+
+          if (data.type === 'oneTimeBill') {
+            const { oneTimeBill } = data;
+            return (
+              <div key={rowKey} className="bg-slate-50 rounded-lg border border-slate-200 p-3 space-y-2">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="w-8 h-6 rounded-md shadow-sm flex items-center justify-center text-[8px] text-white font-bold tracking-wider"
+                      style={{ backgroundColor: card.color || '#334155' }}
+                    >
+                      {card.bankName.substring(0, 3)}
+                    </div>
+                    <div>
+                      <p className="font-semibold text-slate-800 text-xs">{oneTimeBill.name}</p>
+                      <p className="text-[10px] text-slate-500">{card.bankName} {card.cardName}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => onToggleOneTimeBillPaid(oneTimeBill.id)}
+                    className={cn(
+                      'p-1.5 rounded-full transition-all',
+                      oneTimeBill.isPaid
+                        ? 'text-green-600 bg-green-100'
+                        : 'text-slate-300 bg-slate-100'
+                    )}
+                  >
+                    {oneTimeBill.isPaid ? <CheckCircle2 className="w-4 h-4" /> : <Circle className="w-4 h-4" />}
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <span className="text-slate-500">Due Date</span>
+                    <p className="font-medium text-slate-700">{format(displayDate, 'MMM dd')}</p>
+                  </div>
+                  <div>
+                    <span className="text-slate-500">Amount</span>
+                    <p className="font-medium text-slate-700">₱{formatCurrency(displayAmount)}</p>
+                  </div>
+                </div>
+              </div>
+            );
+          }
+
+          // Regular card
+          const { stmt, cardInstTotal } = data;
+          const cardInsts = activeInstallments.filter((i: any) => i.cardId === card.id);
+          const amountDue = stmt?.adjustedAmount ?? displayAmount;
+
+          return (
+            <div key={rowKey} className="bg-slate-50 rounded-lg border border-slate-200 p-3 space-y-2">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-2">
+                  <div
+                    className="w-8 h-6 rounded-md shadow-sm flex items-center justify-center text-[8px] text-white font-bold tracking-wider"
+                    style={{ backgroundColor: card.color || '#334155' }}
+                  >
+                    {card.bankName.substring(0, 3)}
+                  </div>
+                  <div>
+                    <p className="font-semibold text-slate-800 text-xs">{card.cardName}</p>
+                    <p className="text-[10px] text-slate-500">{card.bankName}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => onTogglePaid(card.id)}
+                  className={cn(
+                    'p-1.5 rounded-full transition-all',
+                    stmt?.isPaid
+                      ? 'text-green-600 bg-green-100'
+                      : 'text-slate-300 bg-slate-100'
+                  )}
+                >
+                  {stmt?.isPaid ? <CheckCircle2 className="w-4 h-4" /> : <Circle className="w-4 h-4" />}
+                </button>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div>
+                  <span className="text-slate-500">Due Date</span>
+                  <p className="font-medium text-slate-700">{format(displayDate, 'MMM dd')}</p>
+                </div>
+                <div>
+                  <span className="text-slate-500">Amount</span>
+                  <p className="font-medium text-slate-700">₱{formatCurrency(amountDue)}</p>
+                </div>
+              </div>
+              {cardInsts.length > 0 && (
+                <div className="text-xs">
+                  <span className="text-slate-500">Installments</span>
+                  <div className="space-y-1 mt-1">
+                    {cardInsts.map((inst: any) => (
+                      <div key={inst.id} className="text-[10px] bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-100">
+                        {inst.name}: {inst.status.currentTerm}/{inst.terms}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+        {sortedData.length === 0 && (
+          <div className="text-center text-slate-500 text-sm py-4">
+            {multiProfileMode
+              ? 'No cards or installments found. Select profiles to view.'
+              : 'No cards or installments found for this profile.'}
+          </div>
+        )}
+      </div>
+    </>
   );
 }
 

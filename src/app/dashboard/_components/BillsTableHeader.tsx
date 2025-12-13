@@ -24,9 +24,9 @@ export function BillsTableHeader({
   onExportCSV,
 }: BillsTableHeaderProps) {
   return (
-    <div className="flex justify-between items-center px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-      <h3 className="font-bold text-slate-700">Bills for {format(viewDate, 'MMMM yyyy')}</h3>
-      <div className="flex items-center gap-2">
+    <div className="flex flex-wrap gap-2 justify-between items-center px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-100 bg-slate-50/50">
+      <h3 className="font-bold text-slate-700 text-sm sm:text-base">Bills for {format(viewDate, 'MMMM yyyy')}</h3>
+      <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
         {bulkSelectMode && selectedCardsCount > 0 && (
           <button
             onClick={onCopySelected}
