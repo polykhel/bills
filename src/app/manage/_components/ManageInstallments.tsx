@@ -40,7 +40,7 @@ export function ManageInstallments({
       id: 'name',
       accessorKey: 'name',
       header: () => (
-        <button className="text-xs uppercase text-slate-600" onClick={() => onSort('name')}>Item</button>
+        <button className="text-xs sm:text-sm font-bold text-slate-700 uppercase hover:text-slate-900" onClick={() => onSort('name')}>Item</button>
       ),
       cell: ({ row }) => <span className="font-medium text-slate-800">{row.original.name}</span>,
       size: 200,
@@ -49,7 +49,7 @@ export function ManageInstallments({
       id: 'card',
       accessorFn: (row) => row.cardId,
       header: () => (
-        <button className="text-xs uppercase text-slate-600" onClick={() => onSort('card')}>Card</button>
+        <button className="text-xs sm:text-sm font-bold text-slate-700 uppercase hover:text-slate-900" onClick={() => onSort('card')}>Card</button>
       ),
       cell: ({ row }) => {
         const inst = row.original;
@@ -62,7 +62,7 @@ export function ManageInstallments({
       id: 'startDate',
       accessorKey: 'startDate',
       header: () => (
-        <button className="text-xs uppercase text-slate-600" onClick={() => onSort('startDate')}>Start Date</button>
+        <button className="text-xs sm:text-sm font-bold text-slate-700 uppercase hover:text-slate-900" onClick={() => onSort('startDate')}>Start Date</button>
       ),
       cell: ({ row }) => <span className="text-slate-600">{new Date(row.original.startDate).toLocaleDateString()}</span>,
       size: 140,
@@ -71,7 +71,7 @@ export function ManageInstallments({
       id: 'progress',
       accessorFn: (row) => getInstallmentStatus(row as Installment, viewDate).currentTerm,
       header: () => (
-        <button className="text-xs uppercase text-slate-600" onClick={() => onSort('progress')}>Progress</button>
+        <button className="text-xs sm:text-sm font-bold text-slate-700 uppercase hover:text-slate-900" onClick={() => onSort('progress')}>Progress</button>
       ),
       cell: ({ row }) => {
         const inst = row.original;
@@ -94,13 +94,13 @@ export function ManageInstallments({
     {
       id: 'monthly',
       accessorKey: 'monthlyAmortization',
-      header: () => <span className="text-xs uppercase text-slate-600">Monthly</span>,
+      header: () => <span className="text-xs sm:text-sm font-bold text-slate-700 uppercase">Monthly</span>,
       cell: ({ row }) => <span className="text-slate-800 font-semibold">₱{formatCurrency(row.original.monthlyAmortization)}</span>,
       size: 140,
     },
     {
       id: 'action',
-      header: () => <span className="text-xs uppercase text-right block text-slate-600">Action</span>,
+      header: () => <span className="text-xs sm:text-sm font-bold text-slate-700 uppercase block text-right">Action</span>,
       cell: ({ row }) => (
         <div className="flex justify-end gap-2">
           <button onClick={() => onEditInstallment(row.original)} className="text-slate-400 hover:text-blue-500">

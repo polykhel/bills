@@ -40,7 +40,7 @@ export function ManageOneTimeBills({
       id: 'name',
       accessorKey: 'name',
       header: () => (
-        <button className="text-xs uppercase text-slate-600" onClick={() => onSort('name')}>Item</button>
+        <button className="text-xs sm:text-sm font-bold text-slate-700 uppercase hover:text-slate-900" onClick={() => onSort('name')}>Item</button>
       ),
       cell: ({ row }) => <span className="font-medium text-slate-800">{row.original.name}</span>,
       size: 200,
@@ -49,7 +49,7 @@ export function ManageOneTimeBills({
       id: 'card',
       accessorFn: (row) => row.cardId,
       header: () => (
-        <button className="text-xs uppercase text-slate-600" onClick={() => onSort('card')}>Card</button>
+        <button className="text-xs sm:text-sm font-bold text-slate-700 uppercase hover:text-slate-900" onClick={() => onSort('card')}>Card</button>
       ),
       cell: ({ row }) => {
         const bill = row.original;
@@ -62,7 +62,7 @@ export function ManageOneTimeBills({
       id: 'dueDate',
       accessorKey: 'dueDate',
       header: () => (
-        <button className="text-xs uppercase text-slate-600" onClick={() => onSort('dueDate')}>Due Date</button>
+        <button className="text-xs sm:text-sm font-bold text-slate-700 uppercase hover:text-slate-900" onClick={() => onSort('dueDate')}>Due Date</button>
       ),
       cell: ({ row }) => <span className="text-slate-600">{new Date(row.original.dueDate).toLocaleDateString()}</span>,
       size: 140,
@@ -71,7 +71,7 @@ export function ManageOneTimeBills({
       id: 'amount',
       accessorKey: 'amount',
       header: () => (
-        <button className="text-xs uppercase text-slate-600" onClick={() => onSort('amount')}>Amount</button>
+        <button className="text-xs sm:text-sm font-bold text-slate-700 uppercase hover:text-slate-900" onClick={() => onSort('amount')}>Amount</button>
       ),
       cell: ({ row }) => <span className="text-slate-800 font-semibold">₱{formatCurrency(row.original.amount)}</span>,
       size: 140,
@@ -80,7 +80,7 @@ export function ManageOneTimeBills({
       id: 'isPaid',
       accessorKey: 'isPaid',
       header: () => (
-        <button className="text-xs uppercase text-slate-600" onClick={() => onSort('isPaid')}>Status</button>
+        <button className="text-xs sm:text-sm font-bold text-slate-700 uppercase hover:text-slate-900" onClick={() => onSort('isPaid')}>Status</button>
       ),
       cell: ({ row }) => (
         <span className={row.original.isPaid ? 'inline-block px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700' : 'inline-block px-2 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-700'}>
@@ -91,7 +91,7 @@ export function ManageOneTimeBills({
     },
     {
       id: 'action',
-      header: () => <span className="text-xs uppercase text-right block text-slate-600">Action</span>,
+      header: () => <span className="text-xs sm:text-sm font-bold text-slate-700 uppercase block text-right">Action</span>,
       cell: ({ row }) => (
         <div className="flex justify-end gap-2">
           <button onClick={() => onEditBill(row.original)} className="p-1.5 hover:bg-blue-100 rounded text-blue-600 transition" title="Edit">

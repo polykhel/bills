@@ -85,7 +85,7 @@ function SortLabel({
     <button
       type="button"
       onClick={() => onSort(sortKey)}
-      className="flex items-center gap-1 text-slate-600 hover:text-slate-900 text-[11px] sm:text-xs uppercase"
+      className="flex items-center gap-1 text-slate-700 hover:text-slate-900 text-xs sm:text-sm font-bold uppercase"
     >
       {label}
       <ArrowUpDown
@@ -380,7 +380,7 @@ export function BillsTable({
       },
       {
         id: 'amountDue',
-        header: () => <span className="uppercase">Amount Due</span>,
+        header: () => <span className="text-xs sm:text-sm font-bold text-slate-700 uppercase">Amount Due</span>,
         cell: ({ row }) => {
           const original = row.original;
           if (original.type === 'cashInstallment') {
@@ -455,7 +455,7 @@ export function BillsTable({
       },
       {
         id: 'installments',
-        header: () => <span className="uppercase">Active Installments</span>,
+        header: () => <span className="text-xs sm:text-sm font-bold text-slate-700 uppercase">Active Installments</span>,
         cell: ({ row }) => {
           const original = row.original;
           if (original.type !== 'card') {
@@ -554,7 +554,7 @@ export function BillsTable({
       },
       {
         id: 'copy',
-        header: () => <span className="uppercase">Actions</span>,
+        header: () => <span className="text-xs sm:text-sm font-bold text-slate-700 uppercase">Actions</span>,
         cell: ({ row }) => {
           const original = row.original;
           const rowKey =
