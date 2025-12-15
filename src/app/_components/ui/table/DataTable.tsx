@@ -53,8 +53,8 @@ export function DataTable<TData>({
                   <th
                     key={header.id}
                     className={cn(
-                      'relative bg-slate-50 text-[11px] sm:text-xs text-slate-500 font-semibold border-b border-slate-200 select-none',
-                      column.getIsResizing() ? 'bg-slate-100' : '',
+                      'relative bg-slate-100 text-xs sm:text-sm text-slate-700 font-bold border-b border-slate-300 select-none',
+                      column.getIsResizing() ? 'bg-slate-200' : '',
                       headerClassName
                     )}
                     style={{ width: `${widthPercent}%` }}
@@ -98,7 +98,7 @@ export function DataTable<TData>({
                 return (
                   <td
                     key={cell.id}
-                    className={cn('align-top p-3', column.columnDef.meta?.cellClassName)}
+                    className={cn('align-top p-3 text-sm text-slate-800', column.columnDef.meta?.cellClassName)}
                     style={{ width: `${widthPercent}%` }}
                   >
                     {renderCell ? renderCell(cell) : flexRender(column.columnDef.cell, cell.getContext())}
