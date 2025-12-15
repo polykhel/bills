@@ -13,6 +13,28 @@ const KEYS = {
   ACTIVE_MONTH: 'bt_active_month',
   MULTI_PROFILE_MODE: 'bt_multi_profile_mode',
   SELECTED_PROFILE_IDS: 'bt_selected_profile_ids',
+  COLUMN_LAYOUTS: 'bt_column_layouts',
+};
+
+// Generic JSON helpers for objects (not just arrays)
+const loadJSON = <T,>(key: string, fallback: T): T => {
+  if (typeof window === 'undefined') return fallback;
+  try {
+    const item = localStorage.getItem(key);
+    return item ? (JSON.parse(item) as T) : fallback;
+  } catch (e) {
+    console.error('Error loading JSON from key:', key, e);
+    return fallback;
+  }
+};
+
+const saveJSON = <T,>(key: string, value: T) => {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (e) {
+    console.error('Error saving JSON to key:', key, e);
+  }
 };
 
 export const loadData = <T,>(key: string): T[] => {
@@ -129,6 +151,20 @@ export const Storage = {
   // Bank balance tracking
   getBankBalanceTrackingEnabled: (): boolean => loadBoolean(KEYS.BANK_BALANCE_TRACKING_ENABLED),
   saveBankBalanceTrackingEnabled: (enabled: boolean) => saveBoolean(KEYS.BANK_BALANCE_TRACKING_ENABLED, enabled),
+
+  // Column layouts (per profile, per table id)
+  getColumnLayouts: () => loadJSON<Record<string, Record<string, any>>>(KEYS.COLUMN_LAYOUTS, {}),
+  saveColumnLayouts: (layouts: Record<string, Record<string, any>>) => saveJSON(KEYS.COLUMN_LAYOUTS, layouts),
+  getColumnLayout: (profileId: string, tableId: string) => {
+    const allLayouts = loadJSON<Record<string, Record<string, any>>>(KEYS.COLUMN_LAYOUTS, {});
+    return allLayouts[profileId]?.[tableId] ?? null;
+  },
+  saveColumnLayout: (profileId: string, tableId: string, layout: any) => {
+    const allLayouts = loadJSON<Record<string, Record<string, any>>>(KEYS.COLUMN_LAYOUTS, {});
+    const profileLayouts = allLayouts[profileId] ?? {};
+    profileLayouts[tableId] = layout;
+    saveJSON(KEYS.COLUMN_LAYOUTS, { ...allLayouts, [profileId]: profileLayouts });
+  },
 };
 
 export { KEYS };

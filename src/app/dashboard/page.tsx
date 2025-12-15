@@ -3,7 +3,7 @@
 import { format, setDate, parseISO, isValid } from 'date-fns';
 import { cn, formatCurrency } from '../../lib/utils';
 import { useApp } from "../providers";
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { StatsCards } from './_components/StatsCards';
 import { BankBalanceToggle } from './_components/BankBalanceToggle';
 import { BillsTableHeader } from './_components/BillsTableHeader';
@@ -17,6 +17,7 @@ export default function DashboardPage() {
     setDashboardSort,
     visibleCards,
     profiles,
+    activeProfileId,
     multiProfileMode,
     activeInstallments,
     activeCashInstallments,
@@ -42,51 +43,6 @@ export default function DashboardPage() {
   const [selectedCards, setSelectedCards] = useState<Set<string>>(new Set());
   const [batchCopied, setBatchCopied] = useState(false);
   const [bulkSelectMode, setBulkSelectMode] = useState(false);
-  const [showCopyColumn, setShowCopyColumn] = useState(false);
-  
-  const [columnWidths, setColumnWidths] = useState<Record<string, number>>({
-    checkbox: 40,
-    card: 140,
-    dueDate: 100,
-    statementBalance: 120,
-    amountDue: 120,
-    installments: 100,
-    status: 80,
-    copy: 60
-  });
-  const [resizing, setResizing] = useState<{ column: string; startX: number; startWidth: number } | null>(null);
-
-  useEffect(() => {
-    if (!resizing) return;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!resizing) return;
-      const diff = e.clientX - resizing.startX;
-      const newWidth = Math.max(50, resizing.startWidth + diff);
-      setColumnWidths(prev => ({ ...prev, [resizing.column]: newWidth }));
-    };
-
-    const handleMouseUp = () => {
-      setResizing(null);
-    };
-
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [resizing]);
-
-  const startResize = (column: string, e: React.MouseEvent) => {
-    e.preventDefault();
-    setResizing({
-      column,
-      startX: e.clientX,
-      startWidth: columnWidths[column]
-    });
-  };
 
   const copyCardInfo = async (cardName: string, bankName: string, amountDue: number) => {
     const text = `${bankName} ${cardName}\t${formatCurrency(amountDue)}`;
@@ -256,8 +212,6 @@ export default function DashboardPage() {
           sortedData={sortedDashboardData}
           bulkSelectMode={bulkSelectMode}
           selectedCards={selectedCards}
-          columnWidths={columnWidths}
-          onStartResize={startResize}
           dashboardSort={dashboardSort as any}
           onSort={handleSort}
           onToggleCardSelection={toggleCardSelection}
@@ -273,8 +227,7 @@ export default function DashboardPage() {
           setCopiedId={setCopiedId}
           activeInstallments={activeInstallments}
           multiProfileMode={multiProfileMode}
-          isResizing={!!resizing}
-          showCopyColumn={showCopyColumn}
+          activeProfileId={activeProfileId}
         />
       </div>
     </div>
