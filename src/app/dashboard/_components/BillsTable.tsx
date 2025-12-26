@@ -144,6 +144,7 @@ export function BillsTable({
             checked={selectedCards.size === sortedData.length && sortedData.length > 0}
             onChange={onToggleAllCards}
             className="w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500 cursor-pointer"
+            id="select-all-cards"
           />
         ),
         cell: ({ row }) => {
@@ -160,6 +161,7 @@ export function BillsTable({
               checked={selectedCards.has(cardId)}
               onChange={() => onToggleCardSelection(cardId)}
               className="w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500 cursor-pointer"
+              id={`select-${cardId}`}
             />
           );
         },
@@ -288,6 +290,7 @@ export function BillsTable({
                 value={dateVal}
                 onUpdate={(value) => onUpdateCashInstallment(ci.id, { dueDate: value as string })}
                 className="bg-transparent border-none p-0 text-xs sm:text-sm font-medium text-slate-700 focus:ring-0 cursor-pointer w-28 sm:w-32"
+                id={`cash-due-${ci.id}`}
               />
             );
           }
@@ -300,6 +303,7 @@ export function BillsTable({
                 value={dateVal}
                 onUpdate={(value) => onUpdateOneTimeBill(bill.id, { dueDate: value as string })}
                 className="bg-transparent border-none p-0 text-xs sm:text-sm font-medium text-slate-700 focus:ring-0 cursor-pointer w-28 sm:w-32"
+                id={`bill-due-${bill.id}`}
               />
             );
           }
@@ -311,6 +315,7 @@ export function BillsTable({
                 value={dateVal}
                 onUpdate={(value) => onUpdateStatement(original.card.id, { customDueDate: value as string })}
                 className="bg-transparent border-none p-0 text-xs sm:text-sm font-medium text-slate-700 focus:ring-0 cursor-pointer w-28 sm:w-32"
+                id={`card-due-${original.card.id}`}
               />
               <span className="text-[10px] text-slate-400">Cut-off: {original.card.cutoffDay}th</span>
             </div>
@@ -346,6 +351,7 @@ export function BillsTable({
                   }}
                   className="w-full pl-6 pr-2 py-1 sm:py-1.5 bg-slate-100 border-transparent focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 rounded-lg text-xs sm:text-sm transition-all font-medium text-slate-800"
                   placeholder="0.00"
+                  id={`stmt-amount-${original.card.id}`}
                 />
               </div>
               <div className="flex gap-1 sm:gap-1.5 flex-wrap">
@@ -400,6 +406,7 @@ export function BillsTable({
                   }}
                   className="w-full pl-6 pr-2 py-1 sm:py-1.5 bg-slate-100 border-transparent focus:bg-white focus:border-purple-500 focus:ring-2 focus:ring-purple-200 rounded-lg text-xs sm:text-sm transition-all font-medium text-slate-800"
                   placeholder="0.00"
+                  id={`cash-amount-${ci.id}`}
                 />
               </div>
             );
@@ -432,6 +439,7 @@ export function BillsTable({
                   }}
                   className="w-full pl-6 pr-2 py-1 sm:py-1.5 bg-slate-100 border-transparent focus:bg-white focus:border-purple-500 focus:ring-2 focus:ring-purple-200 rounded-lg text-xs sm:text-sm transition-all font-medium text-slate-800"
                   placeholder={original.displayAmount.toFixed(2)}
+                  id={`adjusted-amount-${original.card.id}`}
                 />
               </div>
               {stmt?.adjustedAmount !== undefined && stmt.adjustedAmount !== original.displayAmount && (
@@ -495,10 +503,12 @@ export function BillsTable({
             const ci = original.cashInstallment!;
             return (
               <button
+                type="button"
                 onClick={() => onToggleCashInstallmentPaid(ci.id)}
                 title="Toggle Paid"
+                style={{ pointerEvents: 'auto', cursor: 'pointer' }}
                 className={cn(
-                  'p-1.5 sm:p-2 rounded-full transition-all duration-200 inline-flex items-center justify-center',
+                  'p-1.5 sm:p-2 rounded-full transition-all duration-200 inline-flex items-center justify-center relative z-10',
                   ci.isPaid ? 'text-green-600 bg-green-100 hover:bg-green-200' : 'text-slate-300 bg-slate-100 hover:bg-slate-200 hover:text-slate-500'
                 )}
               >
@@ -520,10 +530,12 @@ export function BillsTable({
                   {bill.isPaid ? 'Paid' : 'Unpaid'}
                 </span>
                 <button
+                  type="button"
                   onClick={() => onToggleOneTimeBillPaid(bill.id)}
                   title="Toggle Paid"
+                  style={{ pointerEvents: 'auto', cursor: 'pointer' }}
                   className={cn(
-                    'p-1.5 sm:p-2 rounded-full transition-all duration-200 inline-flex items-center justify-center',
+                    'p-1.5 sm:p-2 rounded-full transition-all duration-200 inline-flex items-center justify-center relative z-10',
                     bill.isPaid ? 'text-green-600 bg-green-100 hover:bg-green-200' : 'text-slate-300 bg-slate-100 hover:bg-slate-200 hover:text-slate-500'
                   )}
                 >
@@ -536,10 +548,12 @@ export function BillsTable({
           const stmt = original.stmt;
           return (
             <button
+              type="button"
               onClick={() => onTogglePaid(original.card.id)}
               title="Toggle Paid"
+              style={{ pointerEvents: 'auto', cursor: 'pointer' }}
               className={cn(
-                'p-1.5 sm:p-2 rounded-full transition-all duration-200 inline-flex items-center justify-center',
+                'p-1.5 sm:p-2 rounded-full transition-all duration-200 inline-flex items-center justify-center relative z-10',
                 stmt?.isPaid
                   ? 'text-green-600 bg-green-100 hover:bg-green-200'
                   : 'text-slate-300 bg-slate-100 hover:bg-slate-200 hover:text-slate-500'
@@ -600,6 +614,19 @@ export function BillsTable({
     [activeInstallments, copiedId, dashboardSort, multiProfileMode, onCopyCardInfo, onSort, onToggleAllCards, onToggleCardSelection, onToggleCashInstallmentPaid, onToggleOneTimeBillPaid, onTogglePaid, onUpdateCashInstallment, onUpdateOneTimeBill, onUpdateStatement, selectedCards, setCopiedId, sortedData]
   );
 
+  // Generate a key based on data to detect changes
+  const dataKey = React.useMemo(() => {
+    return sortedData.map(d => {
+      if (d.type === 'cashInstallment') {
+        return `${d.cashInstallment!.id}-${d.cashInstallment!.isPaid}`;
+      } else if (d.type === 'oneTimeBill') {
+        return `${d.oneTimeBill!.id}-${d.oneTimeBill!.isPaid}`;
+      } else {
+        return `${d.card.id}-${d.stmt?.isPaid ?? false}`;
+      }
+    }).join('|');
+  }, [sortedData]);
+
   const table = useReactTable({
     data: sortedData,
     columns,
@@ -628,6 +655,7 @@ export function BillsTable({
           />
         </div>
         <DataTable
+          key={dataKey}
           table={table}
           stickyHeader
           className="pb-4"

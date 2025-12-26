@@ -164,7 +164,9 @@ export function useStatements(isLoaded: boolean) {
         const updates = newIsPaid 
           ? { isPaid: newIsPaid, isUnbilled: false } 
           : { isPaid: newIsPaid };
-        return prev.map(s => s.id === existing.id ? { ...s, ...updates } : s);
+        const updated = prev.map(s => s.id === existing.id ? { ...s, ...updates } : s);
+        // Force a new array reference to ensure React detects the change
+        return [...updated];
       }
       return [...prev, { 
         id: crypto.randomUUID(), 
@@ -342,9 +344,13 @@ export function useCashInstallments(isLoaded: boolean) {
   };
 
   const toggleCashInstallmentPaid = (id: string) => {
-    setCashInstallments(prev => prev.map(i => 
-      i.id === id ? { ...i, isPaid: !i.isPaid } : i
-    ));
+    setCashInstallments(prev => {
+      const updated = prev.map(i => 
+        i.id === id ? { ...i, isPaid: !i.isPaid } : i
+      );
+      // Force a new array reference to ensure React detects the change
+      return [...updated];
+    });
   };
 
   return {
@@ -394,9 +400,13 @@ export function useOneTimeBills(isLoaded: boolean) {
   };
 
   const toggleOneTimeBillPaid = (id: string) => {
-    setOneTimeBills(prev => prev.map(b => 
-      b.id === id ? { ...b, isPaid: !b.isPaid } : b
-    ));
+    setOneTimeBills(prev => {
+      const updated = prev.map(b => 
+        b.id === id ? { ...b, isPaid: !b.isPaid } : b
+      );
+      // Force a new array reference to ensure React detects the change
+      return [...updated];
+    });
   };
 
   return {

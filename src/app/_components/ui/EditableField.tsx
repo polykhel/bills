@@ -11,6 +11,7 @@ type EditableFieldProps = {
   step?: string;
   min?: string;
   max?: string;
+  id?: string;
 };
 
 export function EditableField({
@@ -22,6 +23,7 @@ export function EditableField({
   step,
   min,
   max,
+  id,
 }: EditableFieldProps) {
   const [localValue, setLocalValue] = useState<string | number>(value);
   const [isEditing, setIsEditing] = useState(false);
@@ -67,6 +69,7 @@ export function EditableField({
       step={step}
       min={min}
       max={max}
+      id={id}
     />
   );
 }
